@@ -98,11 +98,13 @@ class InputSynchronizer : public InputSynchronizerBase {
    */
   template <typename MsgT>
   void addQueue(InputData::InputType type,
-                std::function<void(const MsgT&, InputSynchronizerData*)>
-                    extraction_function) {
-    subscribers_.emplace_back(std::make_unique<InputSubscriber<MsgT>>(
-        nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
-        extraction_function, this));
+                std::function<void(const MsgT&, InputSynchronizerData*)> extraction_function) {
+                  
+    subscribers_.emplace_back(std::make_unique<InputSubscriber<MsgT>>( nh_, 
+                                                                      kDefaultTopicNames_.at(type), 
+                                                                      config_.max_input_queue_length,
+                                                                      extraction_function, 
+                                                                      this));
   }
 
   /**

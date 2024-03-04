@@ -67,8 +67,7 @@ void InputSynchronizer::advertiseInputTopics() {
     switch (type) {
       case InputData::InputType::kDepthImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
-        addQueue<MsgT>(
-            type, [this](const MsgT& msg, InputSynchronizerData* data) {
+        addQueue<MsgT>(type, [this](const MsgT& msg, InputSynchronizerData* data) {
               const cv_bridge::CvImageConstPtr depth =
                   cv_bridge::toCvCopy(msg, "32FC1");
               data->data->depth_image_ = depth->image;

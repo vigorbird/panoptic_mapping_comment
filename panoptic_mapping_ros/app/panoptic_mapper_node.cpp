@@ -8,8 +8,7 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "panoptic_mapper", ros::init_options::NoSigintHandler);
 
   // Always add these arguments for proper logging.
-  config_utilities::RequiredArguments ra(
-      &argc, &argv, {"--logtostderr", "--colorlogtostderr"});
+  config_utilities::RequiredArguments ra( &argc, &argv, {"--logtostderr", "--colorlogtostderr"});
 
   // Setup logging.
   google::InitGoogleLogging(argv[0]);
@@ -19,7 +18,7 @@ int main(int argc, char** argv) {
   // Setup node.
   ros::NodeHandle nh("");
   ros::NodeHandle nh_private("~");
-  panoptic_mapping::PanopticMapper mapper(nh, nh_private);
+  panoptic_mapping::PanopticMapper mapper(nh, nh_private);//最重要的声明函数！！！！搜索 PanopticMapper 构造函数
 
   // Setup spinning.
   ros::AsyncSpinner spinner(mapper.getConfig().ros_spinner_threads);

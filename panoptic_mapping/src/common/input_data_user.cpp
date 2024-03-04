@@ -33,6 +33,7 @@ bool InputDataUser::inputIsValid(const InputData& input_data,
   return true;
 }
 
+
 void InputDataUser::addRequiredInput(InputData::InputType type) {
   required_inputs_.insert(type);
 }

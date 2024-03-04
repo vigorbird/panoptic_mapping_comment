@@ -198,8 +198,7 @@ class PanopticMapper {
   bool got_a_frame_ = false;
 
   // Default namespaces and types for modules are defined here.
-  static const std::map<std::string, std::pair<std::string, std::string>>
-      default_names_and_types_;
+  static const std::map<std::string, std::pair<std::string, std::string>>  default_names_and_types_;
   ros::NodeHandle defaultNh(const std::string& key) const;
 };
 

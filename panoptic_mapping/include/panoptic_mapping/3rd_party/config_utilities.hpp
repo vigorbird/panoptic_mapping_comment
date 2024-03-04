@@ -1812,6 +1812,7 @@ class Factory {
   template <class BaseT, typename... Args>
   static std::unique_ptr<BaseT> create(const internal::ParamMap& params,
                                        Args... args) {
+
     ModuleMap<BaseT, Args...>& module = ModuleMap<BaseT, Args...>::instance();
     std::stringstream ss;
     ((ss << typeid(args).name() << ", "), ...);
@@ -1947,8 +1948,7 @@ class Factory {
   struct ModuleMap {
    public:
     using FactoryMethod = std::function<BaseT*(Args... args)>;
-    using FactoryMethodRos =
-        std::function<BaseT*(const internal::ParamMap& params, Args... args)>;
+    using FactoryMethodRos = std::function<BaseT*(const internal::ParamMap& params, Args... args)>;
     // Singleton access.
     static ModuleMap& instance() {
       static ModuleMap instance_;
@@ -2162,11 +2162,10 @@ class FactoryRos : protected Factory {
    * the derived object.
    */
   template <class BaseT, typename... Args>
-  static std::unique_ptr<BaseT> create(const ros::NodeHandle& nh,
-                                       Args... args) {
+  static std::unique_ptr<BaseT> create(const ros::NodeHandle& nh, Args... args) {
     // Get the config and create the target.
     internal::ParamMap params = internal::getParamMapFromRos(nh);
-    return Factory::create<BaseT>(params, args...);
+    return Factory::create<BaseT>(params, args...);//搜索 create(const internal::ParamMap& params,
   }
 };
 

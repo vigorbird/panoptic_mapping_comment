@@ -73,8 +73,7 @@ class InputSubscriber : public InputSubscriberBase {
  public:
   InputSubscriber(const ros::NodeHandle& nh, const std::string& topic_name,
                   int queue_size,
-                  std::function<void(const MsgT&, InputSynchronizerData*)>
-                      extraction_function,
+                  std::function<void(const MsgT&, InputSynchronizerData*)> extraction_function,
                   InputSynchronizerBase* parent)
       : extraction_function_(std::move(extraction_function)),
         nh_(nh),

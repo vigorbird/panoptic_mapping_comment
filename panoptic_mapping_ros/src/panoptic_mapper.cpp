@@ -56,20 +56,17 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("indicate_default_values", &indicate_default_values);
 }
 
+//PanopticMapper 构造函数
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
                                const ros::NodeHandle& nh_private)
     : nh_(nh),
       nh_private_(nh_private),
-      config_(
-          config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private)
-              .checkValid()) {
+      config_( config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private).checkValid()) {
   // Setup printing of configs.
   // NOTE(schmluk): These settings are global so multiple panoptic mappers in
   // the same process might interfere.
-  config_utilities::GlobalSettings().indicate_default_values =
-      config_.indicate_default_values;
-  config_utilities::GlobalSettings().indicate_units =
-      config_.display_config_units;
+  config_utilities::GlobalSettings().indicate_default_values = config_.indicate_default_values;
+  config_utilities::GlobalSettings().indicate_units = config_.display_config_units;
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // Setup all components of the panoptic mapper.
@@ -77,6 +74,7 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
   setupRos();
 }
 
+//
 void PanopticMapper::setupMembers() {
   // Map.
   submaps_ = std::make_shared<SubmapCollection>();
@@ -85,13 +83,10 @@ void PanopticMapper::setupMembers() {
   thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);
 
   // Camera.
-  auto camera = std::make_shared<Camera>(
-      config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
+  auto camera = std::make_shared<Camera>(config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
 
   // Label Handler.
-  std::shared_ptr<LabelHandlerBase> label_handler =
-      config_utilities::FactoryRos::create<LabelHandlerBase>(
-          defaultNh("label_handler"));
+  std::shared_ptr<LabelHandlerBase> label_handler =  config_utilities::FactoryRos::create<LabelHandlerBase>(defaultNh("label_handler"));
 
   // Setup the number of labels.
   FixedCountVoxel::setNumCounts(label_handler->numberOfLabels());
@@ -100,70 +95,55 @@ void PanopticMapper::setupMembers() {
   globals_ = std::make_shared<Globals>(camera, label_handler);
 
   // Submap Allocation.
-  std::shared_ptr<SubmapAllocatorBase> submap_allocator =
-      config_utilities::FactoryRos::create<SubmapAllocatorBase>(
-          defaultNh("submap_allocator"));
-  std::shared_ptr<FreespaceAllocatorBase> freespace_allocator =
-      config_utilities::FactoryRos::create<FreespaceAllocatorBase>(
-          defaultNh("freespace_allocator"));
+  std::shared_ptr<SubmapAllocatorBase> submap_allocator = config_utilities::FactoryRos::create<SubmapAllocatorBase>(defaultNh("submap_allocator"));
+  std::shared_ptr<FreespaceAllocatorBase> freespace_allocator = config_utilities::FactoryRos::create<FreespaceAllocatorBase>( defaultNh("freespace_allocator"));
 
   // ID Tracking.
-  id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
-      defaultNh("id_tracker"), globals_);
+  //全局搜索 std::unique_ptr<IDTrackerBase> id_tracker_;
+  id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>( defaultNh("id_tracker"), globals_);
   id_tracker_->setSubmapAllocator(submap_allocator);
   id_tracker_->setFreespaceAllocator(freespace_allocator);
 
   // Tsdf Integrator.
-  tsdf_integrator_ = config_utilities::FactoryRos::create<TsdfIntegratorBase>(
-      defaultNh("tsdf_integrator"), globals_);
+  tsdf_integrator_ = config_utilities::FactoryRos::create<TsdfIntegratorBase>( defaultNh("tsdf_integrator"), globals_);
 
   // Map Manager.
-  map_manager_ = config_utilities::FactoryRos::create<MapManagerBase>(
-      defaultNh("map_management"));
+  map_manager_ = config_utilities::FactoryRos::create<MapManagerBase>( defaultNh("map_management"));
 
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
 
   // Submaps.
-  submap_visualizer_ = config_utilities::FactoryRos::create<SubmapVisualizer>(
-      defaultNh("vis_submaps"), globals_);
+  submap_visualizer_ = config_utilities::FactoryRos::create<SubmapVisualizer>( defaultNh("vis_submaps"), globals_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // Tracking.
-  tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
-      config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
-          defaultNh("vis_tracking")));
+  tracking_visualizer_ = std::make_unique<TrackingVisualizer>(  config_utilities::getConfigFromRos<TrackingVisualizer::Config>(defaultNh("vis_tracking"))  );
   tracking_visualizer_->registerIDTracker(id_tracker_.get());
 
   // Planning.
   setupCollectionDependentMembers();
 
   // Data Logging.
-  data_logger_ = config_utilities::FactoryRos::create<DataWriterBase>(
-      defaultNh("data_writer"));
+  data_logger_ = config_utilities::FactoryRos::create<DataWriterBase>( defaultNh("data_writer"));
 
   // Setup all requested inputs from all modules.
   InputData::InputTypes requested_inputs;
-  std::vector<InputDataUser*> input_data_users = {
-      id_tracker_.get(), tsdf_integrator_.get(), submap_allocator.get(),
-      freespace_allocator.get()};
+  std::vector<InputDataUser*> input_data_users = {  id_tracker_.get(), 
+                                                    tsdf_integrator_.get(), 
+                                                    submap_allocator.get(),
+                                                    freespace_allocator.get()};
   for (const InputDataUser* input_data_user : input_data_users) {
     requested_inputs.insert(input_data_user->getRequiredInputs().begin(),
                             input_data_user->getRequiredInputs().end());
   }
-  compute_vertex_map_ =
-      requested_inputs.find(InputData::InputType::kVertexMap) !=
-      requested_inputs.end();
-  compute_validity_image_ =
-      requested_inputs.find(InputData::InputType::kValidityImage) !=
-      requested_inputs.end();
+  compute_vertex_map_ = requested_inputs.find(InputData::InputType::kVertexMap) != requested_inputs.end();
+  compute_validity_image_ = requested_inputs.find(InputData::InputType::kValidityImage) != requested_inputs.end();
 
   // Setup the input synchronizer.
-  input_synchronizer_ = std::make_unique<InputSynchronizer>(
-      config_utilities::getConfigFromRos<InputSynchronizer::Config>(
-          nh_private_),
-      nh_);
-  input_synchronizer_->requestInputs(requested_inputs);
+  input_synchronizer_ = std::make_unique<InputSynchronizer>( config_utilities::getConfigFromRos<InputSynchronizer::Config>(nh_private_),
+                                                              nh_);
+  input_synchronizer_->requestInputs(requested_inputs);//整个代码就这里调用了requestInputs函数
 }
 
 void PanopticMapper::setupCollectionDependentMembers() {
@@ -171,50 +151,43 @@ void PanopticMapper::setupCollectionDependentMembers() {
   planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
 
   // Planning Visualizer.
-  planning_visualizer_ = std::make_unique<PlanningVisualizer>(
-      config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
-          defaultNh("vis_planning")),
-      planning_interface_);
+  planning_visualizer_ = std::make_unique<PlanningVisualizer>(config_utilities::getConfigFromRos<PlanningVisualizer::Config>( defaultNh("vis_planning")),
+                                                                                                                              planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
-}
+}//end function setupCollectionDependentMembers
+
 
 void PanopticMapper::setupRos() {
   // Setup all input topics.
   input_synchronizer_->advertiseInputTopics();
 
   // Services.
-  save_map_srv_ = nh_private_.advertiseService(
-      "save_map", &PanopticMapper::saveMapCallback, this);
-  load_map_srv_ = nh_private_.advertiseService(
-      "load_map", &PanopticMapper::loadMapCallback, this);
-  set_visualization_mode_srv_ = nh_private_.advertiseService(
-      "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
-      this);
-  print_timings_srv_ = nh_private_.advertiseService(
-      "print_timings", &PanopticMapper::printTimingsCallback, this);
-  finish_mapping_srv_ = nh_private_.advertiseService(
-      "finish_mapping", &PanopticMapper::finishMappingCallback, this);
+  save_map_srv_ = nh_private_.advertiseService("save_map", &PanopticMapper::saveMapCallback, this);
+  load_map_srv_ = nh_private_.advertiseService("load_map", &PanopticMapper::loadMapCallback, this);
+  set_visualization_mode_srv_ = nh_private_.advertiseService( "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback, this);
+  print_timings_srv_ = nh_private_.advertiseService("print_timings", &PanopticMapper::printTimingsCallback, this);
+  finish_mapping_srv_ = nh_private_.advertiseService("finish_mapping", &PanopticMapper::finishMappingCallback, this);
 
   // Timers.
+  //定时可视化
   if (config_.visualization_interval > 0.0) {
-    visualization_timer_ = nh_private_.createTimer(
-        ros::Duration(config_.visualization_interval),
-        &PanopticMapper::publishVisualizationCallback, this);
+    visualization_timer_ = nh_private_.createTimer( ros::Duration(config_.visualization_interval),
+                                                    &PanopticMapper::publishVisualizationCallback, this);
   }
+  //定时log输出
   if (config_.data_logging_interval > 0.0) {
-    data_logging_timer_ =
-        nh_private_.createTimer(ros::Duration(config_.data_logging_interval),
-                                &PanopticMapper::dataLoggingCallback, this);
+    data_logging_timer_ = nh_private_.createTimer(ros::Duration(config_.data_logging_interval),
+                                                  &PanopticMapper::dataLoggingCallback, this);
   }
+  //定时输出耗时
   if (config_.print_timing_interval > 0.0) {
-    print_timing_timer_ =
-        nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
-                                &PanopticMapper::dataLoggingCallback, this);
+    print_timing_timer_ = nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
+                                                  &PanopticMapper::dataLoggingCallback, this);
   }
-  input_timer_ =
-      nh_private_.createTimer(ros::Duration(config_.check_input_interval),
-                              &PanopticMapper::inputCallback, this);
-}
+  input_timer_ = nh_private_.createTimer(ros::Duration(config_.check_input_interval),
+                                        &PanopticMapper::inputCallback, this);
+}//end fucntion setupRos
+
 
 void PanopticMapper::inputCallback(const ros::TimerEvent&) {
   if (input_synchronizer_->hasInputData()) {
@@ -459,8 +432,7 @@ void PanopticMapper::printTimingsCallback(const ros::TimerEvent&) {
 
 void PanopticMapper::printTimings() const { LOG(INFO) << Timing::Print(); }
 
-bool PanopticMapper::finishMappingCallback(
-    std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
+bool PanopticMapper::finishMappingCallback( std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
   finishMapping();
   return true;
 }
@@ -469,8 +441,7 @@ ros::NodeHandle PanopticMapper::defaultNh(const std::string& key) const {
   // Essentially just read the default namespaces list and type params.
   // NOTE(schmluk): Since these lookups are quasi-static we don't check for
   // correct usage here.
-  const std::pair<std::string, std::string>& ns_and_type =
-      default_names_and_types_.at(key);
+  const std::pair<std::string, std::string>& ns_and_type = default_names_and_types_.at(key);
   ros::NodeHandle nh_out(nh_private_, ns_and_type.first);
   if (!ns_and_type.second.empty() && !nh_out.hasParam("type")) {
     nh_out.setParam("type", ns_and_type.second);

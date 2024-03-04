@@ -50,7 +50,7 @@ struct LabelEntry {
 
   // Color to be used to display this label.
   Color color = Color(80, 80, 80);
-};
+};//end struct LabelEntry
 
 }  // namespace panoptic_mapping
 

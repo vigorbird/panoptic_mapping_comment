@@ -21,6 +21,7 @@ class ThreadSafeSubmapCollection {
       : submaps_source_(std::move(submaps)), updated_(new bool()) {
     update();
   }
+  
   virtual ~ThreadSafeSubmapCollection() = default;
 
   /* Interaction */

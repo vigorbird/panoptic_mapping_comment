@@ -24,8 +24,7 @@ namespace panoptic_mapping {
  */
 class IDTrackerBase : public InputDataUser {
  public:
-  explicit IDTrackerBase(std::shared_ptr<Globals> globals)
-      : globals_(std::move(globals)) {}
+  explicit IDTrackerBase(std::shared_ptr<Globals> globals): globals_(std::move(globals)) {}
   ~IDTrackerBase() override = default;
 
   // Interface.
