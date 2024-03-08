@@ -80,13 +80,14 @@ class InputSubscriber : public InputSubscriberBase {
         parent_(parent) {
     // Subscribe to the topic.
     subscriber_ = nh_.subscribe(topic_name, queue_size,
-                                &InputSubscriber<MsgT>::msgCallback, this);
+                                &InputSubscriber<MsgT>::msgCallback, this);//整个代码就这里调用了 msgCallback函数
   }
 
   void msgCallback(const MsgT& msg) {
     // Store the input message data in the queue.
     const ros::Time stamp = getTimeStampFromMsg(msg);
     InputSynchronizerData* data;
+    //整个代码里就这里调用了 getDataInQueue函数
     if (parent_->getDataInQueue(stamp, &data)) {
       extraction_function_(msg, data);
       parent_->checkDataIsReady(data);

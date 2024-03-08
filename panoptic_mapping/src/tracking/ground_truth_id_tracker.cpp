@@ -25,6 +25,7 @@ GroundTruthIDTracker::GroundTruthIDTracker(const Config& config,
                      InputData::InputType::kValidityImage});
 }
 
+
 void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
                                         InputData* input) {
   CHECK_NOTNULL(submaps);
@@ -59,7 +60,7 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
 
   // Allocate free space map if required.
   freespace_allocator_->allocateSubmap(submaps, input);
-}
+}// 
 
 bool GroundTruthIDTracker::parseInputInstance(int instance,
                                               SubmapCollection* submaps,

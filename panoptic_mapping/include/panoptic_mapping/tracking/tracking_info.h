@@ -82,14 +82,12 @@ class TrackingInfoAggregator {
   int getNumberOfOverlappingPixels(int input_id, int submap_id) const;
 
  private:
-  std::function<float(int, int)> getComputeValueFunction(
-      const std::string& metric) const;
+  std::function<float(int, int)> getComputeValueFunction(const std::string& metric) const;
   float computIoU(int input_id, int submap_id) const;
   float computOverlap(int input_id, int submap_id) const;
 
   // Data.
-  std::unordered_map<int, std::unordered_map<int, int>>
-      overlap_;  // <input_id, <rendered_id, count>>
+  std::unordered_map<int, std::unordered_map<int, int>> overlap_;  // <input_id, <rendered_id, count>>
   std::unordered_map<int, int> total_rendered_count_;  // <rendered_id, count>
   std::unordered_map<int, int> total_input_count_;     // <input_id, count>
 };

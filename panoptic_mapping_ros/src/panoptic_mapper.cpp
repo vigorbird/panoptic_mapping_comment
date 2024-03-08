@@ -74,13 +74,13 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
   setupRos();
 }
 
-//
+//整个函数没干什么实质性的活 就是构建了很多对象
 void PanopticMapper::setupMembers() {
   // Map.
-  submaps_ = std::make_shared<SubmapCollection>();
+  submaps_ = std::make_shared<SubmapCollection>();//构造函数没干什么活
 
   // Threadsafe wrapper for the map.
-  thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);
+  thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);//构造函数没干什么活
 
   // Camera.
   auto camera = std::make_shared<Camera>(config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
@@ -159,6 +159,7 @@ void PanopticMapper::setupCollectionDependentMembers() {
 
 void PanopticMapper::setupRos() {
   // Setup all input topics.
+  //更新subscribers_成员变量
   input_synchronizer_->advertiseInputTopics();
 
   // Services.
@@ -184,27 +185,29 @@ void PanopticMapper::setupRos() {
     print_timing_timer_ = nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
                                                   &PanopticMapper::dataLoggingCallback, this);
   }
+  //
   input_timer_ = nh_private_.createTimer(ros::Duration(config_.check_input_interval),
                                         &PanopticMapper::inputCallback, this);
 }//end fucntion setupRos
 
 
+//非常重要的函数！
 void PanopticMapper::inputCallback(const ros::TimerEvent&) {
+
   if (input_synchronizer_->hasInputData()) {
     std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
     if (data) {
-      processInput(data.get());
+      processInput(data.get());//very important function! 这个函数的实现就在下面！
       if (config_.shutdown_when_finished) {
         last_input_ = ros::Time::now();
         got_a_frame_ = true;
       }
     }
-  } else {
+  } else {//长时间没有收到数据 准备保存地图！
     if (config_.shutdown_when_finished && got_a_frame_ &&
         (ros::Time::now() - last_input_).toSec() >= 3.0) {
       // No more frames, finish up.
-      LOG_IF(INFO, config_.verbosity >= 1)
-          << "No more frames received for 3 seconds, shutting down.";
+      LOG_IF(INFO, config_.verbosity >= 1) << "No more frames received for 3 seconds, shutting down.";
       finishMapping();
       if (!config_.save_map_path_when_finished.empty()) {
         saveMap(config_.save_map_path_when_finished);
@@ -223,27 +226,37 @@ void PanopticMapper::processInput(InputData* input) {
   // Compute and store the validity image.
   if (compute_validity_image_) {
     Timer validity_timer("input/compute_validity_image");
-    input->setValidityImage(
-        globals_->camera()->computeValidityImage(input->depthImage()));
+    //computeValidityImage = 对深度图的的深度进行过滤 不要太小或者太大的值
+    input->setValidityImage( globals_->camera()->computeValidityImage(input->depthImage()) );
   }
 
   // Compute and store the vertex map.
   if (compute_vertex_map_) {
     Timer vertex_timer("input/compute_vertex_map");
-    input->setVertexMap(
-        globals_->camera()->computeVertexMap(input->depthImage()));
+    //每个像素上有对应的深度 计算每个像素坐标对应的3d点坐标
+    input->setVertexMap(  globals_->camera()->computeVertexMap(input->depthImage()) );
   }
   ros::WallTime t0 = ros::WallTime::now();
 
   // Track the segmentation images and allocate new submaps.
   Timer id_timer("input/id_tracking");
-  id_tracker_->processInput(submaps_.get(), input);
+  //一共有四种不同的tracker实现 ground_truth, projective, detectron, single_tsdf，具体实现详见 panoptic_mapping/src/tracking/ 目录下的源码
+  //搜索 DetectronIDTracker::processInput
+  //GroundTruthIDTracker::processInput
+  //ProjectiveIDTracker::processInput 
+  //SingleTSDFTracker::processInput
+  id_tracker_->processInput(submaps_.get(), input);//very important fucntion!!!!!
   ros::WallTime t1 = ros::WallTime::now();
   id_timer.Stop();
 
   // Integrate the images.
   Timer tsdf_timer("input/tsdf_integration");
-  tsdf_integrator_->processInput(submaps_.get(), input);
+  //一共有三种不同的tsdf_intergrator实现，具体实现详见 panoptic_mapping/src/integration 目录下的源码
+  //搜索 projective, class_projective, single_tsdf
+  //ClassProjectiveIntegrator::processInput
+  //ProjectiveIntegrator::processInput
+  //SingleTsdfIntegrator::processInput
+  tsdf_integrator_->processInput(submaps_.get(), input);//very important fucntion!!!!!
   ros::WallTime t2 = ros::WallTime::now();
   tsdf_timer.Stop();
 
@@ -265,7 +278,7 @@ void PanopticMapper::processInput(InputData* input) {
 
   // If requested update the thread_safe_submaps.
   if (config_.use_threadsafe_submap_collection) {
-    thread_safe_submaps_->update();
+    thread_safe_submaps_->update();//沒干什么事情！！
   }
 
   // Logging.
@@ -287,7 +300,8 @@ void PanopticMapper::processInput(InputData* input) {
   previous_frame_time_ = ros::WallTime::now();
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
   LOG_IF(INFO, config_.print_timing_interval < 0.0) << "\n" << Timing::Print();
-}
+}//end fucntion processInput
+
 
 void PanopticMapper::finishMapping() {
   map_manager_->finishMapping(submaps_.get());

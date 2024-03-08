@@ -2,8 +2,7 @@
 
 namespace panoptic_mapping {
 
-DetectronLabel detectronLabelFromMsg(
-    const panoptic_mapping_msgs::DetectronLabel& msg) {
+DetectronLabel detectronLabelFromMsg( const panoptic_mapping_msgs::DetectronLabel& msg) {
   DetectronLabel result;
   result.id = msg.id;
   result.instance_id = msg.instance_id;
@@ -13,8 +12,7 @@ DetectronLabel detectronLabelFromMsg(
   return result;
 }
 
-DetectronLabels detectronLabelsFromMsg(
-    const panoptic_mapping_msgs::DetectronLabels& msg) {
+DetectronLabels detectronLabelsFromMsg(const panoptic_mapping_msgs::DetectronLabels& msg) {
   DetectronLabels result;
   for (const panoptic_mapping_msgs::DetectronLabel& label : msg.labels) {
     result[label.id] = detectronLabelFromMsg(label);

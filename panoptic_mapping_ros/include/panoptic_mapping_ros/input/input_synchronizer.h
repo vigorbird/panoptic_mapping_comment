@@ -96,10 +96,11 @@ class InputSynchronizer : public InputSynchronizerBase {
    * @param extraction_function Function that is called to extract the message
    * to input data.
    */
+  //这个函数在 advertiseInputTopics 函数中调用
   template <typename MsgT>
   void addQueue(InputData::InputType type,
                 std::function<void(const MsgT&, InputSynchronizerData*)> extraction_function) {
-                  
+    //整个代码就这里使用了 InputSubscriber              
     subscribers_.emplace_back(std::make_unique<InputSubscriber<MsgT>>( nh_, 
                                                                       kDefaultTopicNames_.at(type), 
                                                                       config_.max_input_queue_length,

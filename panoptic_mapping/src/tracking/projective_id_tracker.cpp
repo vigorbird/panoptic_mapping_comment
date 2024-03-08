@@ -49,12 +49,14 @@ ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
                      InputData::InputType::kValidityImage});
 }
 
+//ProjectiveIDTracker::processInput 实现
 void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
                                        InputData* input) {
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK(inputIsValid(*input));
-  // Visualization.
+
+  // Visualization.不用看没用！
   cv::Mat input_vis;
   std::unique_ptr<Timer> vis_timer;
   if (visualizationIsOn()) {
@@ -68,7 +70,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   Timer timer("tracking");
   auto t0 = std::chrono::high_resolution_clock::now();
   Timer detail_timer("tracking/compute_tracking_data");
-  TrackingInfoAggregator tracking_data = computeTrackingData(submaps, input);
+  TrackingInfoAggregator tracking_data = computeTrackingData(submaps, input);//非常重要的函数！！！！！！
 
   // Assign the input ids to tracks or allocate new maps.
   detail_timer = Timer("tracking/match_ids");
@@ -97,9 +99,8 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
           if (id_value.second < config_.match_acceptance_threshold) {
             // No more matches possible.
             break;
-          } else if (classesMatch(
-                         input_id,
-                         submaps->getSubmap(id_value.first).getClassID())) {
+          } else if (classesMatch(input_id,
+                                  submaps->getSubmap(id_value.first).getClassID())) {
             // Found the best match.
             matched = true;
             submap_id = id_value.first;
@@ -107,8 +108,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
             break;
           }
         }
-      } else if (any_overlap && ids_values.front().second >
-                                    config_.match_acceptance_threshold) {
+      } else if (any_overlap && ids_values.front().second > config_.match_acceptance_threshold) {
         // Check only for the highest match.
         matched = true;
         submap_id = ids_values.front().first;
@@ -135,8 +135,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 
     // Allocate new submap if necessary and store tracking info.
     alloc_timer.Unpause();
-    bool allocate_new_submap = tracking_data.getNumberOfInputPixels(input_id) >=
-                               config_.min_allocation_size;
+    bool allocate_new_submap = tracking_data.getNumberOfInputPixels(input_id) >= config_.min_allocation_size;
     if (matched) {
       n_matched++;
       input_to_output[input_id] = submap_id;
@@ -177,13 +176,14 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   detail_timer.Stop();
 
   // Translate the id image.
-  for (auto it = input->idImagePtr()->begin<int>();
-       it != input->idImagePtr()->end<int>(); ++it) {
+  for (auto it = input->idImagePtr()->begin<int>(); it != input->idImagePtr()->end<int>(); ++it) {
     *it = input_to_output[*it];
   }
 
   // Allocate free space map if required.
   alloc_timer.Unpause();
+  //搜索 MonolithicFreespaceAllocator::allocateSubmap
+  //在作者整个的配置文件里面都是使用的 freespace_allocator_ 类型 = MonolithicFreespaceAllocator
   freespace_allocator_->allocateSubmap(submaps, input);
   alloc_timer.Stop();
 
@@ -215,7 +215,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
     visualize(tracked_vis, "tracked");
     vis_timer->Stop();
   }
-}
+}// end ProjectiveIDTracker::processInput function
 
 Submap* ProjectiveIDTracker::allocateSubmap(int input_id,
                                             SubmapCollection* submaps,
@@ -235,11 +235,9 @@ bool ProjectiveIDTracker::classesMatch(int input_id, int submap_class_id) {
   return globals_->labelHandler()->getClassID(input_id) == submap_class_id;
 }
 
-TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData(
-    SubmapCollection* submaps, InputData* input) {
+TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData( SubmapCollection* submaps, InputData* input) {
   // Render each active submap in parallel to collect overlap statistics.
-  const std::vector<int> visible_submaps =
-      globals_->camera()->findVisibleSubmapIDs(*submaps, input->T_M_C());
+  const std::vector<int> visible_submaps = globals_->camera()->findVisibleSubmapIDs(*submaps, input->T_M_C());
 
   // Make sure the meshes of all submaps are update for tracking.
   for (int submap_id : visible_submaps) {
@@ -300,7 +298,7 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData(
     rendered_vis_ = renderer_.colorIdImage(vis);
   }
   return tracking_data;
-}
+}// end computeTrackingData function!
 
 TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate(
     const Submap& submap, const InputData& input) const {

@@ -55,6 +55,7 @@ void InputSynchronizer::requestInputs(const InputData::InputTypes& types) {
   }
 }
 
+//
 void InputSynchronizer::advertiseInputTopics() {
   // Parse all required inputs and allocate an input queue for each.
   // NOTE(schmluk): Image copies appear to be necessary since some of the data
@@ -62,14 +63,13 @@ void InputSynchronizer::advertiseInputTopics() {
   // NOTE(schmluk): each input writes to a different image so we can do this
   // concurrently, only lock the mutex when writing to the contained inputs.
   subscribers_.clear();
-  subscribed_inputs_.clear();
+  subscribed_inputs_.clear();//subscribed_inputs_ = std::unordered_set<InputType>;
   for (const InputData::InputType type : requested_inputs_) {
     switch (type) {
-      case InputData::InputType::kDepthImage: {
+      case InputData::InputType::kDepthImage: {//深度图像
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [this](const MsgT& msg, InputSynchronizerData* data) {
-              const cv_bridge::CvImageConstPtr depth =
-                  cv_bridge::toCvCopy(msg, "32FC1");
+              const cv_bridge::CvImageConstPtr depth =  cv_bridge::toCvCopy(msg, "32FC1");
               data->data->depth_image_ = depth->image;
 
               // NOTE(schmluk): If the sensor frame name is not set
@@ -79,34 +79,29 @@ void InputSynchronizer::advertiseInputTopics() {
               }
 
               const std::lock_guard<std::mutex> lock(data->write_mutex_);
-              data->data->contained_inputs_.insert(
-                  InputData::InputType::kDepthImage);
+              data->data->contained_inputs_.insert(InputData::InputType::kDepthImage);
             });
         subscribed_inputs_.insert(InputData::InputType::kDepthImage);
         break;
       }
-      case InputData::InputType::kColorImage: {
+      case InputData::InputType::kColorImage: {//颜色图像
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
-          const cv_bridge::CvImageConstPtr color =
-              cv_bridge::toCvCopy(msg, "bgr8");
+          const cv_bridge::CvImageConstPtr color = cv_bridge::toCvCopy(msg, "bgr8");
           data->data->color_image_ = color->image;
           const std::lock_guard<std::mutex> lock(data->write_mutex_);
-          data->data->contained_inputs_.insert(
-              InputData::InputType::kColorImage);
+          data->data->contained_inputs_.insert(InputData::InputType::kColorImage);
         });
         subscribed_inputs_.insert(InputData::InputType::kColorImage);
         break;
       }
-      case InputData::InputType::kSegmentationImage: {
+      case InputData::InputType::kSegmentationImage: {//语义分割图像
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
-          const cv_bridge::CvImageConstPtr seg =
-              cv_bridge::toCvCopy(msg, "32SC1");
+          const cv_bridge::CvImageConstPtr seg = cv_bridge::toCvCopy(msg, "32SC1");
           data->data->id_image_ = seg->image;
           const std::lock_guard<std::mutex> lock(data->write_mutex_);
-          data->data->contained_inputs_.insert(
-              InputData::InputType::kSegmentationImage);
+          data->data->contained_inputs_.insert(InputData::InputType::kSegmentationImage);
         });
         subscribed_inputs_.insert(InputData::InputType::kSegmentationImage);
         break;
@@ -116,8 +111,7 @@ void InputSynchronizer::advertiseInputTopics() {
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
           data->data->detectron_labels_ = detectronLabelsFromMsg(msg);
           const std::lock_guard<std::mutex> lock(data->write_mutex_);
-          data->data->contained_inputs_.insert(
-              InputData::InputType::kDetectronLabels);
+          data->data->contained_inputs_.insert( InputData::InputType::kDetectronLabels);
         });
         subscribed_inputs_.insert(InputData::InputType::kDetectronLabels);
         break;

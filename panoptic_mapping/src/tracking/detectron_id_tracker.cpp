@@ -30,6 +30,7 @@ DetectronIDTracker::DetectronIDTracker(const Config& config,
   addRequiredInput(InputData::InputType::kDetectronLabels);
 }
 
+//
 void DetectronIDTracker::processInput(SubmapCollection* submaps,
                                       InputData* input) {
   CHECK_NOTNULL(submaps);
@@ -39,7 +40,7 @@ void DetectronIDTracker::processInput(SubmapCollection* submaps,
   labels_ = &(input->detectronLabels());
 
   // Track the predicted ids.
-  ProjectiveIDTracker::processInput(submaps, input);
+  ProjectiveIDTracker::processInput(submaps, input);//搜索 ProjectiveIDTracker::processInput 实现
 }
 
 Submap* DetectronIDTracker::allocateSubmap(int input_id,

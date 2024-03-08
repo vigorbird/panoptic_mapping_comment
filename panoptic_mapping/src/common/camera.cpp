@@ -200,6 +200,7 @@ std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
   return result;
 }
 
+//每个像素上有对应的深度 计算每个像素坐标对应的3d点坐标
 cv::Mat Camera::computeVertexMap(const cv::Mat& depth_image) const {
   // Compute the 3D pointcloud from a depth image.
   cv::Mat vertices(depth_image.size(), CV_32FC3);
@@ -216,6 +217,7 @@ cv::Mat Camera::computeVertexMap(const cv::Mat& depth_image) const {
   return vertices;
 }
 
+//对深度图的的深度进行过滤 不要太小或者太大的值
 cv::Mat Camera::computeValidityImage(const cv::Mat& depth_image) const {
   // Check whether the depth image is valid. Currently just checks for min and
   // max range.
@@ -223,8 +225,7 @@ cv::Mat Camera::computeValidityImage(const cv::Mat& depth_image) const {
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float depth = depth_image.at<float>(v, u);
-      validity_image.at<uchar>(v, u) = static_cast<uchar>(
-          depth >= config_.min_range && depth <= config_.max_range);
+      validity_image.at<uchar>(v, u) = static_cast<uchar>( depth >= config_.min_range && depth <= config_.max_range);
     }
   }
   return validity_image;
