@@ -27,7 +27,7 @@ struct LabelEntry {
   int class_id = -1;
 
   // The panoptic category of the label.
-  PanopticLabel label = PanopticLabel::kUnknown;
+  PanopticLabel label = PanopticLabel::kUnknown;//背景 未知 实例物体 freespace
 
   // Print the contents of the label.
   virtual std::string toString() const {

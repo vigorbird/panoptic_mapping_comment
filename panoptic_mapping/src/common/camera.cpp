@@ -41,16 +41,19 @@ Camera::Camera(const Config& config) : config_(config.checkValid()) {
                      config_.fx);
   Eigen::Vector3f normal = p1.cross(p2);
   view_frustum_.push_back(normal.normalized());
-  p1 =
-      Eigen::Vector3f(config_.width - config_.vx,
-                      (config_.height - config_.vy) * scale_factor, config_.fx);
+  p1 = Eigen::Vector3f(config_.width - config_.vx, 
+                      (config_.height - config_.vy) * scale_factor, 
+                      config_.fx);
   normal = p2.cross(p1);
   view_frustum_.push_back(normal.normalized());
-  p2 = Eigen::Vector3f(
-      -config_.vx, (config_.height - config_.vy) * scale_factor, config_.fx);
+  p2 = Eigen::Vector3f(-config_.vx, 
+                      (config_.height - config_.vy) * scale_factor, 
+                      config_.fx);
   normal = p1.cross(p2);
   view_frustum_.push_back(normal.normalized());
-  p1 = Eigen::Vector3f(-config_.vx, -config_.vy * scale_factor, config_.fx);
+  p1 = Eigen::Vector3f(-config_.vx, 
+                        -config_.vy * scale_factor, 
+                        config_.fx);
   normal = p2.cross(p1);
   view_frustum_.push_back(normal.normalized());
 }
@@ -74,16 +77,14 @@ bool Camera::pointIsInViewFrustum(const Point& point_C,
 bool Camera::submapIsInViewFrustum(const Submap& submap,
                                    const Transformation& T_M_C) const {
   const float radius = submap.getBoundingVolume().getRadius();
-  const Point center_C = T_M_C.inverse() * submap.getT_M_S() *
-                         submap.getBoundingVolume().getCenter();
+  const Point center_C = T_M_C.inverse() * submap.getT_M_S() * submap.getBoundingVolume().getCenter();
   return pointIsInViewFrustum(center_C, radius);
 }
 
 bool Camera::blockIsInViewFrustum(const Submap& submap,
                                   const voxblox::BlockIndex& block_index,
                                   const Transformation& T_M_C) const {
-  const Transformation T_C_S =
-      T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
+  const Transformation T_C_S = T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   const FloatingPoint block_size = submap.getTsdfLayer().block_size();
   const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
   return blockIsInViewFrustum(submap, block_index, T_C_S, block_size,
@@ -101,8 +102,9 @@ bool Camera::blockIsInViewFrustum(const Submap& submap,
   return pointIsInViewFrustum(p_C, block_diag_half);
 }
 
-bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
-                                      float* v) const {
+//projectPointToImagePlane float
+bool Camera::projectPointToImagePlane(const Point& p_C, 
+                                      float* u, float* v) const {
   // All values are ceiled and floored to guarantee that the resulting points
   // will be valid for any integer conversion.
   CHECK_NOTNULL(u);
@@ -134,9 +136,10 @@ bool Camera::projectPointToImagePlane(const Point& p_C, int* u, int* v) const {
 
 std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
                                               const Transformation& T_M_C,
-                                              bool only_active_submaps,
-                                              bool include_freespace) const {
+                                              bool only_active_submaps,//默认值是true
+                                              bool include_freespace) const {//默认值是false
   std::vector<int> result;
+  //遍历空间中的所有submap
   for (const Submap& submap : submaps) {
     if (!submap.isActive() && only_active_submaps) {
       continue;
@@ -150,7 +153,7 @@ std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
     result.push_back(submap.getID());
   }
   return result;
-}
+}//end function findVisibleSubmapIDs 
 
 voxblox::BlockIndexList Camera::findVisibleBlocks(const Submap& submap,
                                                   const Transformation& T_M_C,
@@ -159,8 +162,7 @@ voxblox::BlockIndexList Camera::findVisibleBlocks(const Submap& submap,
   voxblox::BlockIndexList result;
   voxblox::BlockIndexList all_blocks;
   submap.getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
-  const Transformation T_C_S =
-      T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
+  const Transformation T_C_S =  T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   const FloatingPoint block_size = submap.getTsdfLayer().block_size();
   const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
 
@@ -180,9 +182,12 @@ voxblox::BlockIndexList Camera::findVisibleBlocks(const Submap& submap,
   return result;
 }
 
-std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
-    const SubmapCollection& submaps, const Transformation& T_M_C,
-    const float max_range, bool only_active_submaps) const {
+
+//findVisibleBlocks对外接口
+std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks( const SubmapCollection& submaps, 
+                                                                            const Transformation& T_M_C,
+                                                                            const float max_range, 
+                                                                            bool only_active_submaps) const {
   std::unordered_map<int, voxblox::BlockIndexList> result;
   for (const Submap& submap : submaps) {
     if (!submap.isActive() && only_active_submaps) {
@@ -191,8 +196,7 @@ std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
     if (!submapIsInViewFrustum(submap, T_M_C)) {
       continue;
     }
-    voxblox::BlockIndexList block_list =
-        findVisibleBlocks(submap, T_M_C, max_range);
+    voxblox::BlockIndexList block_list = findVisibleBlocks(submap, T_M_C, max_range);
     if (!block_list.empty()) {
       result[submap.getID()] = block_list;
     }

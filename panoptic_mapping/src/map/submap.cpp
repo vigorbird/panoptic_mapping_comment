@@ -273,10 +273,11 @@ void Submap::updateEverything(bool only_updated_blocks) {
   computeIsoSurfacePoints();
 }
 
+//默认值是only_updated_blocks = true，use_class_layer = flase
 void Submap::updateMesh(bool only_updated_blocks, bool use_class_layer) {
   // Use the default integrator config to have color always available.
   mesh_integrator_->generateMesh(only_updated_blocks, true,
-                                 has_class_layer_ && use_class_layer);
+                                 has_class_layer_ && use_class_layer);//从算法层面就这里调用了 generateMesh函数
 }
 
 void Submap::computeIsoSurfacePoints() {
@@ -329,11 +330,10 @@ bool Submap::applyClassLayer(const LayerManipulator& manipulator,
   return tsdf_layer_->getNumberOfAllocatedBlocks() != 0;
 }
 
-std::unique_ptr<Submap> Submap::clone(
-    SubmapIDManager* submap_id_manager,
-    InstanceIDManager* instance_id_manager) const {
-  auto result = std::unique_ptr<Submap>(
-      new Submap(config_, submap_id_manager, instance_id_manager, getID()));
+std::unique_ptr<Submap> Submap::clone(  SubmapIDManager* submap_id_manager,
+                                        InstanceIDManager* instance_id_manager) const {
+
+  auto result = std::unique_ptr<Submap>( new Submap(config_, submap_id_manager, instance_id_manager, getID()) );
 
   // Copy all members.
   result->instance_id_ = static_cast<int>(instance_id_);

@@ -99,11 +99,10 @@ bool GroundTruthIDTracker::parseInputInstance(int instance,
     instance_to_id_[instance] = new_submap->getID();
     return true;
   } else {
-    LOG_IF(WARNING, config_.verbosity >= 2)
-        << "Submap allocation failed for input ID '" << instance << "'.";
+    LOG_IF(WARNING, config_.verbosity >= 2) << "Submap allocation failed for input ID '" << instance << "'.";
     return false;
   }
-}
+}//end fucntion parseInputInstance
 
 void GroundTruthIDTracker::printAndResetWarnings() {
   if (config_.verbosity < 2) {

@@ -40,8 +40,7 @@ class SubmapIDManager {
 class SubmapID {
  public:
   // Controlled con- and destruction.
-  explicit SubmapID(
-      SubmapIDManager* manager = SubmapIDManager::getGlobalInstance());
+  explicit SubmapID(SubmapIDManager* manager = SubmapIDManager::getGlobalInstance());
   ~SubmapID();
 
   SubmapID(const SubmapID&) = delete;

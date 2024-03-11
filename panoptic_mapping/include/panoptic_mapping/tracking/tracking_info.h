@@ -45,7 +45,7 @@ class TrackingInfo {
  private:
   friend TrackingInfoAggregator;
   const int submap_id_;
-  std::unordered_map<int, int> counts_;  // <input_id, count>
+  std::unordered_map<int, int> counts_;  // <input_id, count>， value的值对应有多少个像素和这个input_id对应
 
   // Approximate rendering.
   const Camera::Config camera_;
@@ -54,7 +54,7 @@ class TrackingInfo {
 
   // Visualization data vertex rendering.
   std::vector<Eigen::Vector2i> points_;
-};
+};//end class TrackingInfo
 
 // Summarize the final tracking data.
 class TrackingInfoAggregator {
@@ -88,7 +88,7 @@ class TrackingInfoAggregator {
 
   // Data.
   std::unordered_map<int, std::unordered_map<int, int>> overlap_;  // <input_id, <rendered_id, count>>
-  std::unordered_map<int, int> total_rendered_count_;  // <rendered_id, count>
+  std::unordered_map<int, int> total_rendered_count_;  // <rendered_id, count> submapid
   std::unordered_map<int, int> total_input_count_;     // <input_id, count>
 };
 

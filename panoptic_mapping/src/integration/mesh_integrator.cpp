@@ -72,6 +72,8 @@ MeshIntegrator::MeshIntegrator(const MeshIntegrator::Config& config,
       0, 0, 1, 1, 1, 1;
 }
 
+//voxblox也有这个函数，只是多了一个 use_class_data 函数
+//在voxblox基础上又增加了一个判断条件：如果这个如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
 void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
                                   bool clear_updated_flag,
                                   bool use_class_data) {
@@ -80,21 +82,28 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
     use_class_layer_ = false;
     LOG(WARNING) << "Tried to use un-initialized class layer, will be ignored.";
   }
+  //1.和voxblox完全一致
   voxblox::BlockIndexList tsdf_blocks;
   if (only_mesh_updated_blocks) {
+    //tsdf_layer_数据类型来自于voxblox
+    //哪些block被更新了，并获取这些block的id=tsdf_blocks
     tsdf_layer_->getAllUpdatedBlocks(voxblox::Update::Status::kMesh,
                                      &tsdf_blocks);
   } else {
     tsdf_layer_->getAllAllocatedBlocks(&tsdf_blocks);
   }
 
-  // Allocate all the mesh memory.
+  // 2.Allocate all the mesh memory.
+  //和voxblox一样
   for (const voxblox::BlockIndex& block_index : tsdf_blocks) {
+    //mesh_layer_数据类型来自于voxblox
+    //判断现有地图中是否有这个block，如果有这个block直接返回这个block的指针，否则向地图插入这个block，并返回对应的指针
     mesh_layer_->allocateMeshPtrByIndex(block_index);
   }
 
-  std::unique_ptr<voxblox::ThreadSafeIndex> index_getter(
-      new voxblox::MixedThreadSafeIndex(tsdf_blocks.size()));
+
+  //3.和voxblox一样
+  std::unique_ptr<voxblox::ThreadSafeIndex> index_getter(new voxblox::MixedThreadSafeIndex(tsdf_blocks.size()));
 
   std::list<std::thread> integration_threads;
   for (size_t i = 0; i < config_.integrator_threads; ++i) {
@@ -108,24 +117,27 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
   }
 }
 
-void MeshIntegrator::generateMeshBlocksFunction(
-    const voxblox::BlockIndexList& tsdf_blocks, bool clear_updated_flag,
-    voxblox::ThreadSafeIndex* index_getter) {
+//voxblox也有这个函数，基本上差不多
+void MeshIntegrator::generateMeshBlocksFunction(const voxblox::BlockIndexList& tsdf_blocks, 
+                                                bool clear_updated_flag,
+                                                voxblox::ThreadSafeIndex* index_getter) {
   DCHECK(index_getter != nullptr);
 
   size_t list_idx;
   while (index_getter->getNextIndex(&list_idx)) {
     const voxblox::BlockIndex& block_idx = tsdf_blocks[list_idx];
-    const bool success = updateMeshForBlock(block_idx);
+    const bool success = updateMeshForBlock(block_idx);//这个函数就在这个下面
     if (clear_updated_flag && success) {
-      tsdf_layer_->getBlockPtrByIndex(block_idx)->setUpdated(
-          voxblox::Update::Status::kMesh, false);
+      //tsdf_layer_ = voxblox定义的数据结果 = voxblox::Layer<TsdfVoxel>;
+      tsdf_layer_->getBlockPtrByIndex(block_idx)->setUpdated( voxblox::Update::Status::kMesh, false);//
     }
   }
-}
 
-bool MeshIntegrator::updateMeshForBlock(
-    const voxblox::BlockIndex& block_index) {
+}//end function 
+
+//voxblox也有这个函数， 基本上和voxblox大致相同
+bool MeshIntegrator::updateMeshForBlock( const voxblox::BlockIndex& block_index) {
+
   voxblox::Mesh::Ptr mesh = mesh_layer_->getMeshPtrByIndex(block_index);
   mesh->clear();
   // This block should already exist, otherwise it makes no sense to update
@@ -148,7 +160,7 @@ bool MeshIntegrator::updateMeshForBlock(
     }
   }
 
-  extractBlockMesh(tsdf_block, class_block, mesh.get());
+  extractBlockMesh(tsdf_block, class_block, mesh.get());//整个代码就这里调用了这个函数，实现详见下面
 
   // Update colors if needed.
   if (config_.use_color) {
@@ -157,8 +169,13 @@ bool MeshIntegrator::updateMeshForBlock(
 
   mesh->updated = true;
   return true;
-}
 
+}//end function updateMeshForBlock
+
+
+//这个函数voxblox也有，只是这里多了 class_block 变量
+//TsdfBlock = voxblox::Block<TsdfVoxel>;
+//在voxblox基础上又增加了一个判断条件：如果这个如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
 void MeshIntegrator::extractBlockMesh(const TsdfBlock& tsdf_block,
                                       const ClassBlock::ConstPtr& class_block,
                                       voxblox::Mesh* mesh) {
@@ -171,9 +188,10 @@ void MeshIntegrator::extractBlockMesh(const TsdfBlock& tsdf_block,
   for (voxel_index.x() = 0; voxel_index.x() < vps - 1; ++voxel_index.x()) {
     for (voxel_index.y() = 0; voxel_index.y() < vps - 1; ++voxel_index.y()) {
       for (voxel_index.z() = 0; voxel_index.z() < vps - 1; ++voxel_index.z()) {
-        Point coords = tsdf_block.computeCoordinatesFromVoxelIndex(voxel_index);
+        Point coords = tsdf_block.computeCoordinatesFromVoxelIndex(voxel_index);//voxblox函数 返回的是voxel的中心点坐标
+        //这个函数voxblox也有，只是这里多了 class_block 变量
         extractMeshInsideBlock(tsdf_block, class_block, voxel_index, coords,
-                               &next_mesh_index, mesh);
+                               &next_mesh_index, mesh);//这个函数就在这个文件中被实现了
       }
     }
   }
@@ -211,16 +229,17 @@ void MeshIntegrator::extractBlockMesh(const TsdfBlock& tsdf_block,
                           &next_mesh_index, mesh);
     }
   }
-}
+}//endf function extractBlockMesh
 
-void MeshIntegrator::extractMeshInsideBlock(
-    const TsdfBlock& tsdf_block, const ClassBlock::ConstPtr& class_block,
-    const voxblox::VoxelIndex& index, const Point& coords,
-    voxblox::VertexIndex* next_mesh_index, voxblox::Mesh* mesh) {
-  Eigen::Matrix<FloatingPoint, 3, 8> cube_coord_offsets =
-      cube_index_offsets_.cast<FloatingPoint>() * voxel_size_;
-  Eigen::Matrix<FloatingPoint, 3, 8> corner_coords;
-  Eigen::Matrix<FloatingPoint, 8, 1> corner_sdf;
+//voxblox也有这个函数，相比于voxblox多了 class_block
+//在voxblox实现的基础上又增加了一个判断条件：如果这个如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
+void MeshIntegrator::extractMeshInsideBlock( const TsdfBlock& tsdf_block, const ClassBlock::ConstPtr& class_block,
+                                            const voxblox::VoxelIndex& index, const Point& coords,
+                                            voxblox::VertexIndex* next_mesh_index, voxblox::Mesh* mesh) {
+
+  Eigen::Matrix<FloatingPoint, 3, 8> cube_coord_offsets = cube_index_offsets_.cast<FloatingPoint>() * voxel_size_;
+  Eigen::Matrix<FloatingPoint, 3, 8> corner_coords;//相邻voxel的中心点坐标，voxblox原生变量
+  Eigen::Matrix<FloatingPoint, 8, 1> corner_sdf;//每一个voxel对应的distance变量， voxblox原生变量
   Eigen::Matrix<bool, 8, 1> corner_belongs;
   bool all_neighbors_observed = true;
   int belonging_corners = 0;
@@ -237,16 +256,16 @@ void MeshIntegrator::extractMeshInsideBlock(
       break;
     }
     if (use_class) {
-      corner_belongs(i) =
-          class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
+      //判断这个voxel是否属于这个submap
+      corner_belongs(i) = class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
       if (corner_belongs(i)) {
         belonging_corners++;
       }
     }
-
     corner_coords.col(i) = coords + cube_coord_offsets.col(i);
   }
 
+  //如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
   if (all_neighbors_observed) {
     if (use_class && belonging_corners <= config_.required_belonging_corners) {
       return;
@@ -260,17 +279,20 @@ void MeshIntegrator::extractMeshInsideBlock(
         }
       }
     }
-    voxblox::MarchingCubes::meshCube(corner_coords, corner_sdf, next_mesh_index,
-                                     mesh);
-  }
-}
+    voxblox::MarchingCubes::meshCube(corner_coords, //周围voxel的中心点xyz坐标
+                                    corner_sdf,  //周围每个voxel对应的sdf距离
+                                    next_mesh_index,
+                                    mesh);
+  }//end if (all_neighbors_observed) 
+}//end function extractMeshOnBorder
 
+
+//相比于voxblox实现版本，基础上又增加了一个判断条件：如果这个如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
 void MeshIntegrator::extractMeshOnBorder(
     const TsdfBlock& tsdf_block, const ClassBlock::ConstPtr& class_block,
     const voxblox::VoxelIndex& index, const Point& coords,
     voxblox::VertexIndex* next_mesh_index, voxblox::Mesh* mesh) {
-  Eigen::Matrix<FloatingPoint, 3, 8> cube_coord_offsets =
-      cube_index_offsets_.cast<FloatingPoint>() * voxel_size_;
+  Eigen::Matrix<FloatingPoint, 3, 8> cube_coord_offsets = cube_index_offsets_.cast<FloatingPoint>() * voxel_size_;
   Eigen::Matrix<FloatingPoint, 3, 8> corner_coords;
   Eigen::Matrix<FloatingPoint, 8, 1> corner_sdf;
   Eigen::Matrix<bool, 8, 1> corner_belongs;
@@ -292,8 +314,7 @@ void MeshIntegrator::extractMeshOnBorder(
         break;
       }
       if (use_class) {
-        corner_belongs(i) =
-            class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
+        corner_belongs(i) =  class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
         if (corner_belongs(i)) {
           belonging_corners++;
         }
@@ -301,60 +322,50 @@ void MeshIntegrator::extractMeshOnBorder(
 
       corner_coords.col(i) = coords + cube_coord_offsets.col(i);
     } else {
-      // We have to access a different block.
-      voxblox::BlockIndex block_offset = voxblox::BlockIndex::Zero();
+        // We have to access a different block.
+        voxblox::BlockIndex block_offset = voxblox::BlockIndex::Zero();
 
-      for (unsigned int j = 0u; j < 3u; j++) {
-        if (corner_index(j) < 0) {
-          block_offset(j) = -1;
-          corner_index(j) = corner_index(j) + voxels_per_side_;
-        } else if (corner_index(j) >=
-                   static_cast<voxblox::IndexElement>(voxels_per_side_)) {
-          block_offset(j) = 1;
-          corner_index(j) = corner_index(j) - voxels_per_side_;
+        for (unsigned int j = 0u; j < 3u; j++) {
+          if (corner_index(j) < 0) {
+            block_offset(j) = -1;
+            corner_index(j) = corner_index(j) + voxels_per_side_;
+          } else if (corner_index(j) >= static_cast<voxblox::IndexElement>(voxels_per_side_)) {
+            block_offset(j) = 1;
+            corner_index(j) = corner_index(j) - voxels_per_side_;
+          }
         }
-      }
 
-      voxblox::BlockIndex neighbor_index =
-          tsdf_block.block_index() + block_offset;
+        voxblox::BlockIndex neighbor_index = tsdf_block.block_index() + block_offset;
 
-      if (tsdf_layer_->hasBlock(neighbor_index)) {
-        const TsdfBlock& neighbor_block =
-            tsdf_layer_->getBlockByIndex(neighbor_index);
+        if (tsdf_layer_->hasBlock(neighbor_index)) {
+          const TsdfBlock& neighbor_block = tsdf_layer_->getBlockByIndex(neighbor_index);
 
-        CHECK(neighbor_block.isValidVoxelIndex(corner_index));
-        const TsdfVoxel& voxel =
-            neighbor_block.getVoxelByVoxelIndex(corner_index);
+          CHECK(neighbor_block.isValidVoxelIndex(corner_index));
+          const TsdfVoxel& voxel = neighbor_block.getVoxelByVoxelIndex(corner_index);
 
-        if (!voxblox::utils::getSdfIfValid(voxel, config_.min_weight,
-                                           &(corner_sdf(i)))) {
+          if (!voxblox::utils::getSdfIfValid(voxel, config_.min_weight,
+                                            &(corner_sdf(i)))) {
+            all_neighbors_observed = false;
+            break;
+          }
+          if (use_class_layer_) {
+            // The class blocks should always exist but just make sure.
+            const ClassBlock::ConstPtr neighbor_class_block = class_layer_->getBlockConstPtrByIndex(neighbor_index);
+            corner_belongs(i) = neighbor_class_block? neighbor_class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap(): true;
+            if (corner_belongs(i)) {
+              belonging_corners++;
+            }
+          }
+          corner_coords.col(i) = coords + cube_coord_offsets.col(i);
+        } else {
           all_neighbors_observed = false;
           break;
         }
-        if (use_class_layer_) {
-          // The class blocks should always exist but just make sure.
-          const ClassBlock::ConstPtr neighbor_class_block =
-              class_layer_->getBlockConstPtrByIndex(neighbor_index);
-          corner_belongs(i) =
-              neighbor_class_block
-                  ? neighbor_class_block->getVoxelByVoxelIndex(corner_index)
-                        .belongsToSubmap()
-                  : true;
-          if (corner_belongs(i)) {
-            belonging_corners++;
-          }
-        }
-        corner_coords.col(i) = coords + cube_coord_offsets.col(i);
-      } else {
-        all_neighbors_observed = false;
-        break;
-      }
     }
   }
 
   if (all_neighbors_observed) {
-    if (use_class_layer_ &&
-        belonging_corners <= config_.required_belonging_corners) {
+    if (use_class_layer_ &&  belonging_corners <= config_.required_belonging_corners) {
       return;
     }
 

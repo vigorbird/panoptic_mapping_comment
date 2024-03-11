@@ -115,7 +115,7 @@ class InputData {
   const cv::Mat& colorImage() const { return color_image_; }
   const DetectronLabels& detectronLabels() const { return detectron_labels_; }
   const cv::Mat& vertexMap() const { return vertex_map_; }
-  const cv::Mat& idImage() const { return id_image_; }
+  const cv::Mat& idImage() const { return id_image_; }//应该是分割结果，每个像素对应着语义分割结果
   const cv::Mat& validityImage() const { return validity_image_; }
   const cv::Mat& uncertaintyImage() const { return uncertainty_image_; }
 

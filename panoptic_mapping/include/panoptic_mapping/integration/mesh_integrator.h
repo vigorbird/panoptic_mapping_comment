@@ -64,7 +64,7 @@ class MeshIntegrator {
     int required_belonging_corners = 4;
 
     // Number of threads used to mesh a layer in parallel.
-    int integrator_threads = std::thread::hardware_concurrency();
+    int integrator_threads = std::thread::hardware_concurrency();//是一个用于确定系统上可用的处理器核心数量的函数。它返回一个整数值，表示可以并行执行的最大线程数
 
     // If true, voxels not belonging to this submap will be set to the
     // truncation distance.
@@ -120,9 +120,9 @@ class MeshIntegrator {
  protected:
   const MeshIntegrator::Config config_;
 
-  std::shared_ptr<TsdfLayer> tsdf_layer_;
-  std::shared_ptr<MeshLayer> mesh_layer_;
-  std::shared_ptr<ClassLayer> class_layer_;
+  std::shared_ptr<TsdfLayer> tsdf_layer_;//TsdfLayer = voxblox::Layer<TsdfVoxel>;
+  std::shared_ptr<MeshLayer> mesh_layer_;//MeshLayer = voxblox::MeshLayer;
+  std::shared_ptr<ClassLayer> class_layer_;//class layer是用户自己定义的
 
   // Cached map config.
   FloatingPoint voxel_size_;

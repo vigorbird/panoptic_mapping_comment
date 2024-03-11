@@ -59,8 +59,8 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
   }
 }
 
-void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
-                                        InputData* input) {
+                                        
+void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,InputData* input) {
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK_NOTNULL(globals_->camera().get());

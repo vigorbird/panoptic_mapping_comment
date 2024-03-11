@@ -31,6 +31,7 @@ TrackingInfo::TrackingInfo(int submap_id, Camera::Config camera)
   v_max_ = 0;
 }
 
+//
 void TrackingInfo::insertRenderedPoint(int u, int v, int size_x, int size_y) {
   // Mark the left side of the maximum vertex size for later evaluation.
   const int u_min = std::max(0, u - size_x);
@@ -52,8 +53,7 @@ void TrackingInfo::evaluate(const cv::Mat& id_image,
   // Pass through the image and lookup which pixels should be covered by the
   // submap. Must be called after all input is inserted.
   for (int v = v_min_; v <= v_max_; ++v) {
-    int range =
-        0;  // Number of pixels in x direction from current index to be counted.
+    int range = 0;  // Number of pixels in x direction from current index to be counted.
     for (int u = u_min_; u <= std::min(u_max_, camera_.width - 1); ++u) {
       range = std::max(range, image_.at<int>(v, u)) - 1;
       if (range > 0) {
@@ -70,24 +70,26 @@ void TrackingInfo::insertVertexPoint(int input_id) {
   incrementMap(&counts_, input_id);
 }
 
-void TrackingInfoAggregator::insertTrackingInfos(
-    const std::vector<TrackingInfo>& infos) {
+void TrackingInfoAggregator::insertTrackingInfos(const std::vector<TrackingInfo>& infos) {
   for (const TrackingInfo& info : infos) {
-    insertTrackingInfo(info);
+    insertTrackingInfo(info);//整个代码就这里调用了 insertTrackingInfo
   }
 }
 
+//本质上是为了更新这两个元素 total_rendered_count_ 和 overlap_
+//total_rendered_count_记录了在所有的submap中每个语义对应多少个像素需要被渲染
+//overlap_记录了每个语义标签对应的每个submap中，多少个像素被渲染
 void TrackingInfoAggregator::insertTrackingInfo(const TrackingInfo& info) {
   // Parse all overlaps. We don't check for duplicate data here since by
   // construction each submap should be parsed separately and only once.
+  //整个代码就这里使用了  info.counts_
+  //遍历所有的语义标签
   for (const auto& id_count_pair : info.counts_) {
+    //total_rendered_count_
     incrementMap(&total_rendered_count_, info.submap_id_, id_count_pair.second);
     auto it = overlap_.find(id_count_pair.first);
     if (it == overlap_.end()) {
-      it = overlap_
-               .insert(std::pair<int, std::unordered_map<int, int>>(
-                   id_count_pair.first, std::unordered_map<int, int>()))
-               .first;
+      it = overlap_.insert(std::pair<int, std::unordered_map<int, int>>(id_count_pair.first, std::unordered_map<int, int>())).first;
     }
     it->second[info.submap_id_] = id_count_pair.second;
   }
@@ -117,18 +119,17 @@ std::vector<int> TrackingInfoAggregator::getInputIDs() const {
   return result;
 }
 
+//详见算法实现文档
 float TrackingInfoAggregator::computIoU(int input_id, int submap_id) const {
   // This assumes that input and submap id exist.
   const int count = overlap_.at(input_id).at(submap_id);
-  return static_cast<float>(count) /
-         (static_cast<float>(total_rendered_count_.at(submap_id) +
-                             total_input_count_.at(input_id) - count));
+  //整个代码就这里使用到了 total_rendered_count_
+  return static_cast<float>(count) / (static_cast<float>(total_rendered_count_.at(submap_id) + total_input_count_.at(input_id) - count));
 }
 
 float TrackingInfoAggregator::computOverlap(int input_id, int submap_id) const {
   // This assumes that input and submap id exist.
-  return static_cast<float>(overlap_.at(input_id).at(submap_id)) /
-         static_cast<float>(total_input_count_.at(input_id));
+  return static_cast<float>(overlap_.at(input_id).at(submap_id)) /  static_cast<float>(total_input_count_.at(input_id));
 }
 
 std::function<float(int, int)> TrackingInfoAggregator::getComputeValueFunction(
@@ -142,6 +143,7 @@ std::function<float(int, int)> TrackingInfoAggregator::getComputeValueFunction(
     LOG(WARNING) << "Unknown tracking metric '" << metric
                  << "', using 'IoU' instead.";
   }
+  //根据作者设定默认是进入这个条件
   return [=](int input_id, int submap_id) {
     return this->computIoU(input_id, submap_id);
   };
@@ -174,9 +176,10 @@ bool TrackingInfoAggregator::getHighestMetric(int input_id, int* submap_id,
   return false;
 }
 
-bool TrackingInfoAggregator::getAllMetrics(
-    int input_id, std::vector<std::pair<int, float>>* id_value,
-    const std::string& metric) const {
+//这个函数的作用应该是，input_id表示空间中某个物体的唯一索引，这个索引可能会存在于多个submap中，在每个submap中根据战
+bool TrackingInfoAggregator::getAllMetrics( int input_id, 
+                                            std::vector<std::pair<int, float>>* id_value,//first = submapid, second = iou,
+                                            const std::string& metric) const {
   CHECK_NOTNULL(id_value);
   // Return all overlapping submap ids ordered by IoU.
   if (overlap_.find(input_id) == overlap_.end()) {
@@ -186,7 +189,7 @@ bool TrackingInfoAggregator::getAllMetrics(
   id_value->clear();
   id_value->reserve(overlap_.at(input_id).size());
   for (const auto& id_count_pair : overlap_.at(input_id)) {
-    id_value->emplace_back(id_count_pair.first,
+    id_value->emplace_back(id_count_pair.first,//]==submap id
                            value_function(input_id, id_count_pair.first));
   }
   if (id_value->empty()) {
@@ -197,7 +200,9 @@ bool TrackingInfoAggregator::getAllMetrics(
               return lhs.second > rhs.second;
             });
   return true;
-}
+}//end function getAllMetrics
+
+
 
 int TrackingInfoAggregator::getNumberOfInputPixels(int input_id) const {
   auto it = total_input_count_.find(input_id);

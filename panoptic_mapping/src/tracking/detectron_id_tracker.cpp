@@ -70,8 +70,7 @@ Submap* DetectronIDTracker::allocateSubmap(int input_id,
   }
 
   // Allocate new submap.
-  Submap* new_submap =
-      submap_allocator_->allocateSubmap(submaps, input, input_id, label);
+  Submap* new_submap = submap_allocator_->allocateSubmap(submaps, input, input_id, label);
   new_submap->setClassID(class_id);
   if (globals_->labelHandler()->segmentationIdExists(class_id)) {
     new_submap->setName(globals_->labelHandler()->getName(class_id));

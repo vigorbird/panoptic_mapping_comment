@@ -242,7 +242,7 @@ class Submap {
   // Labels.
   const SubmapID id_;       // UUID
   InstanceID instance_id_;  // Per default sets up a new unique ID.
-  int class_id_ = -1;
+  int class_id_ = -1; //这说明每个submap有个唯一的语义信息和其对应
   PanopticLabel label_ = PanopticLabel::kUnknown;
   std::string name_ = "Unknown";
 

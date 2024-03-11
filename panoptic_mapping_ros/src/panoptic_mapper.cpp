@@ -240,7 +240,9 @@ void PanopticMapper::processInput(InputData* input) {
 
   // Track the segmentation images and allocate new submaps.
   Timer id_timer("input/id_tracking");
-  //一共有四种不同的tracker实现 ground_truth, projective, detectron, single_tsdf，具体实现详见 panoptic_mapping/src/tracking/ 目录下的源码
+  //1.不同种track方法
+  //一共有四种不同的tracker实现 ground_truth, projective, detectron, single_tsdf，
+  //具体实现详见 panoptic_mapping/src/tracking/ 目录下的源码
   //搜索 DetectronIDTracker::processInput
   //GroundTruthIDTracker::processInput
   //ProjectiveIDTracker::processInput 
@@ -251,6 +253,7 @@ void PanopticMapper::processInput(InputData* input) {
 
   // Integrate the images.
   Timer tsdf_timer("input/tsdf_integration");
+  //2.点云进行merge
   //一共有三种不同的tsdf_intergrator实现，具体实现详见 panoptic_mapping/src/integration 目录下的源码
   //搜索 projective, class_projective, single_tsdf
   //ClassProjectiveIntegrator::processInput

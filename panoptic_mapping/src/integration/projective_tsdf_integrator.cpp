@@ -64,6 +64,7 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
                                  globals_->camera()->getConfig().width);
 }
 
+//ProjectiveIntegrator::processInput 实现
 void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
                                         InputData* input) {
   CHECK_NOTNULL(submaps);
@@ -74,6 +75,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   // Allocate all blocks in corresponding submaps.
   Timer alloc_timer("tsdf_integration/allocate_blocks");
   cam_config_ = &(globals_->camera()->getConfig());
+  //1.新的观测到来后 需要安排新的内存空间
   allocateNewBlocks(submaps, *input);
   alloc_timer.Stop();
 
@@ -81,10 +83,12 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   // Note(schmluk): This could potentially also be included in the parallel part
   // but is already almost instantaneous.
   Timer find_timer("tsdf_integration/find_blocks");
-  std::unordered_map<int, voxblox::BlockIndexList> block_lists =
-      globals_->camera()->findVisibleBlocks(*submaps, input->T_M_C(),
-                                            max_range_in_image_, true);
-  std::vector<int> id_list;
+  //2.根据当前的位姿判断哪些blox可以被观测到
+  //搜索 findVisibleBlocks对外接口
+  std::unordered_map<int, voxblox::BlockIndexList> block_lists =  globals_->camera()->findVisibleBlocks(*submaps, 
+                                                                                                        input->T_M_C(),
+                                                                                                        max_range_in_image_, true);
+  std::vector<int> id_list;//可以被观测到的submap_id
   id_list.reserve(block_lists.size());
   for (const auto& id_blocklist_pair : block_lists) {
     id_list.emplace_back(id_blocklist_pair.first);
@@ -93,6 +97,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
 
   // Integrate in parallel.
   Timer int_timer("tsdf_integration/integration");
+  //遍历所有被观测到的submap_id
   SubmapIndexGetter index_getter(id_list);
   std::vector<std::future<void>> threads;
   for (int i = 0; i < config_.integration_threads; ++i) {
@@ -103,7 +108,8 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
                      while (index_getter.getNextIndex(&index)) {
                        this->updateSubmap(submaps->getSubmapPtr(index),
                                           interpolators_[i].get(),
-                                          block_lists.at(index), *input);
+                                          block_lists.at(index), 
+                                          *input);//这个函数就在下面实现的
                      }
                    }));
   }
@@ -113,15 +119,18 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
     thread.get();
   }
   int_timer.Stop();
-}
+}//end function processInput
 
-void ProjectiveIntegrator::updateSubmap(
-    Submap* submap, InterpolatorBase* interpolator,
-    const voxblox::BlockIndexList& block_indices,
-    const InputData& input) const {
-  Transformation T_C_S = input.T_M_C().inverse() * submap->getT_M_S();
+
+void ProjectiveIntegrator::updateSubmap( Submap* submap, 
+                                          InterpolatorBase* interpolator,
+                                          const voxblox::BlockIndexList& block_indices,
+                                          const InputData& input) const {
+
+  Transformation T_C_S = input.T_M_C().inverse() * submap->getT_M_S();//相机在世界坐标系下的位姿
+  //遍历这个block中所有的voxel
   for (const auto& block_index : block_indices) {
-    updateBlock(submap, interpolator, block_index, T_C_S, input);
+    updateBlock(submap, interpolator, block_index, T_C_S, input);//实习就在下面
   }
 }
 
@@ -137,37 +146,44 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
         << "Tried to access inexistent block '" << block_index.transpose()
         << "' in submap " << submap->getID() << ".";
     return;
+
   }
+  //TsdfBlock = voxblox::Block<TsdfVoxel>;
   TsdfBlock& block = submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
-  const bool is_free_space_submap =
-      submap->getLabel() == PanopticLabel::kFreeSpace;
+  const bool is_free_space_submap = submap->getLabel() == PanopticLabel::kFreeSpace;
   bool was_updated = false;
 
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
-    const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
-                                  i);  // Voxel center in camera frame.
+    const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(i);  // Voxel center in camera frame. voxel中心点在相机坐标系下的坐标
+    //实现就在下面，整个代码就这里使用了这个函数！
     if (updateVoxel(interpolator, &voxel, p_C, input, submap_id,
                     is_free_space_submap, truncation_distance, voxel_size)) {
       was_updated = true;
     }
   }
   if (was_updated) {
-    block.setUpdatedAll();
+    block.setUpdatedAll();//从voxblox代码中并没有找到这个函数，可能是voxblox版本不对！
   }
-}
+}//end funtion updateBlock
 
-bool ProjectiveIntegrator::updateVoxel(
-    InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
-    const InputData& input, const int submap_id,
-    const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxel* class_voxel, ScoreVoxel* score_voxel) const {
+bool ProjectiveIntegrator::updateVoxel(InterpolatorBase* interpolator, 
+                                        TsdfVoxel* voxel,
+                                        const Point& p_C,
+                                        const InputData& input, 
+                                        const int submap_id,
+                                        const bool is_free_space_submap, 
+                                        const float truncation_distance,
+                                        const float voxel_size, 
+                                        ClassVoxel* class_voxel, 
+                                        ScoreVoxel* score_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
+  //a.将在相机坐标系下的点投影到深度图上，然后进行插值计算得到这个点的深度，并用插值深度减去p_C得到sdf
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
     return false;
   }
@@ -176,14 +192,13 @@ bool ProjectiveIntegrator::updateVoxel(
   }
 
   // Check whether this is a clearing or an updating measurement.
-  const bool point_belongs_to_this_submap =
-      interpolator->interpolateID(input.idImage()) == submap_id;
-  if (!(point_belongs_to_this_submap || config_.foreign_rays_clear ||
-        is_free_space_submap)) {
+  const bool point_belongs_to_this_submap = interpolator->interpolateID(input.idImage()) == submap_id;
+  if (!(point_belongs_to_this_submap || config_.foreign_rays_clear ||  is_free_space_submap)) {
     return false;
   }
 
   // Compute the weight of the measurement.
+  //b.实现就在这个文件，是个小函数，根据voxle大小 距离这个voxel的远近，sdf数值更新这个voxel的权重
   const float weight = computeWeight(p_C, voxel_size, truncation_distance, sdf);
 
   // Apply distance, color, and weight.
@@ -192,9 +207,8 @@ bool ProjectiveIntegrator::updateVoxel(
     sdf = std::min(sdf, truncation_distance);
 
     // Only merge color near the surface and if point belongs to the submap.
-    if (!point_belongs_to_this_submap || is_free_space_submap ||
-        std::abs(sdf) >= truncation_distance) {
-      updateVoxelValues(voxel, sdf, weight);
+    if (!point_belongs_to_this_submap || is_free_space_submap ||  std::abs(sdf) >= truncation_distance) {
+      updateVoxelValues(voxel, sdf, weight);//对权重进行融合，并根据新的权重生成颜色
     } else {
       const Color color = interpolator->interpolateColor(input.colorImage());
       updateVoxelValues(voxel, sdf, weight, &color);
@@ -210,6 +224,7 @@ bool ProjectiveIntegrator::updateVoxel(
   return true;
 }
 
+//
 bool ProjectiveIntegrator::computeSignedDistance(const Point& p_C,
                                                  InterpolatorBase* interpolator,
                                                  float* sdf) const {
@@ -217,23 +232,26 @@ bool ProjectiveIntegrator::computeSignedDistance(const Point& p_C,
   if (p_C.z() < 0.0) {
     return false;
   }
+
+  //如果这个voxel距离太近或者太远 都会失败
   const float distance_to_voxel = p_C.norm();
-  if (distance_to_voxel < cam_config_->min_range ||
-      distance_to_voxel > cam_config_->max_range) {
+  //min_range = 0.1 max_range = 5.0
+  if (distance_to_voxel < cam_config_->min_range ||  distance_to_voxel > cam_config_->max_range) {
     return false;
   }
 
   // Project the current voxel into the range image, only count points that fall
   // fully into the image.
-  float u, v;
+  //搜索 projectPointToImagePlane float
+  float u, v;//将外表面的中心带你投影到图像上，得到像素坐标
   if (!globals_->camera()->projectPointToImagePlane(p_C, &u, &v)) {
     return false;
   }
 
   // Set up the interpolator and compute the signed distance.
+  //根据现有深度图计算得到图像像素坐标对应的深度值
   interpolator->computeWeights(u, v, range_image_);
-  const float distance_to_surface =
-      interpolator->interpolateRange(range_image_);
+  const float distance_to_surface = interpolator->interpolateRange(range_image_);
   *sdf = distance_to_surface - distance_to_voxel;
   return true;
 }
@@ -243,23 +261,21 @@ float ProjectiveIntegrator::computeWeight(const Point& p_C,
                                           const float truncation_distance,
                                           const float sdf) const {
   // This approximates the number of rays that would hit this voxel.
-  float weight =
-      cam_config_->fx * cam_config_->fy * std::pow(voxel_size / p_C.z(), 2.f);
+  //距离越远 则撞击这个voxel的概率越小，voxel越大撞击这个voxel的越大
+  float weight = cam_config_->fx * cam_config_->fy * std::pow(voxel_size / p_C.z(), 2.f);
 
   // Weight reduction with distance squared (according to sensor noise models).
+  //默认会进入这个条件
   if (!config_.use_constant_weight) {
     weight /= std::pow(p_C.z(), 2.f);
   }
 
   // Apply weight drop-off if appropriate.
+  //默认进入这个条件！
   if (config_.use_weight_dropoff) {
-    const float dropoff_epsilon =
-        config_.weight_dropoff_epsilon > 0.f
-            ? config_.weight_dropoff_epsilon
-            : config_.weight_dropoff_epsilon * -voxel_size;
+    const float dropoff_epsilon = config_.weight_dropoff_epsilon > 0.f? config_.weight_dropoff_epsilon: config_.weight_dropoff_epsilon * -voxel_size;
     if (sdf < -dropoff_epsilon) {
-      weight *=
-          (truncation_distance + sdf) / (truncation_distance - dropoff_epsilon);
+      weight *= (truncation_distance + sdf) / (truncation_distance - dropoff_epsilon);
       weight = std::max(weight, 0.f);
     }
   }
@@ -270,14 +286,13 @@ void ProjectiveIntegrator::updateVoxelValues(TsdfVoxel* voxel, const float sdf,
                                              const float weight,
                                              const Color* color) const {
   // Weighted averaging fusion.
-  voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
-                    (voxel->weight + weight);
+  voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /(voxel->weight + weight);
   voxel->weight = std::min(voxel->weight + weight, config_.max_weight);
   if (color != nullptr) {
-    voxel->color =
-        Color::blendTwoColors(voxel->color, voxel->weight, *color, weight);
+    voxel->color = Color::blendTwoColors(voxel->color, voxel->weight, *color, weight);
   }
 }  // namespace panoptic_mapping
+
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                                              const InputData& input) {
@@ -303,10 +318,8 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         Submap* submap = submaps->getSubmapPtr(id);
         const int voxels_per_side = submap->getConfig().voxels_per_side;
         const Point p_S = submap->getT_S_M() * input.T_M_C() * p_C;
-        const voxblox::BlockIndex block_index =
-            submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
-        const auto block =
-            submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
+        const voxblox::BlockIndex block_index = submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
+        const auto block = submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
         if (submap->hasClassLayer()) {
           // NOTE(schmluk): The projective integrator does not use the class
           // layer but was added here for simplicity.
@@ -318,6 +331,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
 
         // If required, check whether the point is on the boudnary of a block
         // and allocate the neighboring blocks.
+        //所有的配置文件都会进入这个条件
         if (config_.allocate_neighboring_blocks) {
           for (float sign : {-1.f, 1.f}) {
             const Point p_neighbor_S =

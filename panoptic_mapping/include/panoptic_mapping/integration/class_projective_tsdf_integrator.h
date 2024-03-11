@@ -69,7 +69,7 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
       registration_;
 
   // Cached data.
-  std::unordered_map<int, int> id_to_class_;
+  std::unordered_map<int, int> id_to_class_;//submap_id submap对应的语义id
   size_t num_classes_;
 };
 

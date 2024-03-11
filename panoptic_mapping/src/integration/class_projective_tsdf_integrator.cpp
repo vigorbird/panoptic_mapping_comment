@@ -47,11 +47,12 @@ void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
                                              InputData* input) {
   CHECK_NOTNULL(submaps);  // Input is not used here and checked later.
   // Cache submap ids by class.
-  id_to_class_.clear();
+  id_to_class_.clear();//每个submap对应的语义id
   for (const Submap& submap : *submaps) {
     id_to_class_.emplace(submap.getID(), submap.getClassID());
   }
   id_to_class_[-1] = -1;  // Used for unknown classes.
+  //根据所有yaml配置文件的设置，不会进入下面这个条件
   if (config_.use_instance_classification &&
       !config_.use_binary_classification) {
     // Track the number of classes (where classes in this case are instances).
@@ -61,7 +62,7 @@ void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
   }
 
   // Run the integration.
-  ProjectiveIntegrator::processInput(submaps, input);
+  ProjectiveIntegrator::processInput(submaps, input);//搜索  ProjectiveIntegrator::processInput 实现
 }
 
 void ClassProjectiveIntegrator::updateBlock(
