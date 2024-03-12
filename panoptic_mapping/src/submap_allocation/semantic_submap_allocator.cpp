@@ -74,6 +74,6 @@ Submap* SemanticSubmapAllocator::allocateSubmap(SubmapCollection* submaps,
   new_submap->setLabel(label.label);
   new_submap->setName(label.name);
   return new_submap;
-}//end fucntion alocate submpa
+}//end functoin alocate submpa
 
 }  // namespace panoptic_mapping

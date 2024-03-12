@@ -124,8 +124,7 @@ void InputSynchronizer::advertiseInputTopics() {
                   cv_bridge::toCvCopy(msg, "32FC1");
               data->data->uncertainty_image_ = uncertainty->image;
               const std::lock_guard<std::mutex> lock(data->write_mutex_);
-              data->data->contained_inputs_.insert(
-                  InputData::InputType::kUncertaintyImage);
+              data->data->contained_inputs_.insert(InputData::InputType::kUncertaintyImage);
             });
         subscribed_inputs_.insert(InputData::InputType::kUncertaintyImage);
         break;
@@ -134,6 +133,7 @@ void InputSynchronizer::advertiseInputTopics() {
   }
 }
 
+//
 bool InputSynchronizer::getDataInQueue(const ros::Time& timestamp,
                                        InputSynchronizerData** data) {
   // These are common operations for all subscribers so mutex them to avoid race
