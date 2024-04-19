@@ -71,7 +71,7 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 
   // Setup all components of the panoptic mapper.
   setupMembers();
-  setupRos();
+  setupRos();//搜索  PanopticMapper::setupRos() {
 }
 
 //整个函数没干什么实质性的活 就是构建了很多对象
