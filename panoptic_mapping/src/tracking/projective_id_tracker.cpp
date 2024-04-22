@@ -43,6 +43,7 @@ ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
       renderer_(config.renderer, globals_->camera()->getConfig(), false) {
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
+  //需要的输入
   addRequiredInputs({InputData::InputType::kColorImage,
                      InputData::InputType::kDepthImage,
                      InputData::InputType::kSegmentationImage,
@@ -80,7 +81,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   int n_new = 0;
   Timer alloc_timer("tracking/allocate_submaps");
   alloc_timer.Pause();
-  //2.获取所有语义结构
+  //2.遍历所有的语义标签
   for (const int input_id : tracking_data.getInputIDs()) {
     int submap_id;
     bool matched = false;

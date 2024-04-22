@@ -160,7 +160,7 @@ void PanopticMapper::setupCollectionDependentMembers() {
 void PanopticMapper::setupRos() {
   // Setup all input topics.
   //更新subscribers_成员变量
-  input_synchronizer_->advertiseInputTopics();
+  input_synchronizer_->advertiseInputTopics();//非常重要的函数!!!!!!! 设置回调函数
 
   // Services.
   save_map_srv_ = nh_private_.advertiseService("save_map", &PanopticMapper::saveMapCallback, this);
@@ -185,7 +185,8 @@ void PanopticMapper::setupRos() {
     print_timing_timer_ = nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
                                                   &PanopticMapper::dataLoggingCallback, this);
   }
-  //
+
+  //非常重要的函数！！！！！！！！！！！！！！！！
   input_timer_ = nh_private_.createTimer(ros::Duration(config_.check_input_interval),
                                         &PanopticMapper::inputCallback, this);
 }//end fucntion setupRos
@@ -195,7 +196,7 @@ void PanopticMapper::setupRos() {
 void PanopticMapper::inputCallback(const ros::TimerEvent&) {
 
   if (input_synchronizer_->hasInputData()) {
-    std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
+    std::shared_ptr<InputData> data = input_synchronizer_->getInputData();//从回到函数中取数据
     if (data) {
       processInput(data.get());//very important function! 这个函数的实现就在下面！
       if (config_.shutdown_when_finished) {
@@ -226,7 +227,7 @@ void PanopticMapper::processInput(InputData* input) {
   // Compute and store the validity image.
   if (compute_validity_image_) {
     Timer validity_timer("input/compute_validity_image");
-    //computeValidityImage = 对深度图的的深度进行过滤 不要太小或者太大的值
+    //computeValidityImage函数作用： 对深度图的的深度进行过滤 不要太小或者太大的值
     input->setValidityImage( globals_->camera()->computeValidityImage(input->depthImage()) );
   }
 
@@ -255,7 +256,7 @@ void PanopticMapper::processInput(InputData* input) {
   Timer tsdf_timer("input/tsdf_integration");
   //2.点云进行merge
   //一共有三种不同的tsdf_intergrator实现，具体实现详见 panoptic_mapping/src/integration 目录下的源码
-  //搜索 projective, class_projective, single_tsdf
+  //搜索 
   //ClassProjectiveIntegrator::processInput
   //ProjectiveIntegrator::processInput
   //SingleTsdfIntegrator::processInput

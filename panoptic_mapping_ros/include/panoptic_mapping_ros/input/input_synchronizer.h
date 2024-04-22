@@ -98,15 +98,15 @@ class InputSynchronizer : public InputSynchronizerBase {
    */
   //这个函数在 advertiseInputTopics 函数中调用
   template <typename MsgT>
-  void addQueue(InputData::InputType type,
+  void addQueue(InputData::InputType type,//根据类型指定topic名称
                 std::function<void(const MsgT&, InputSynchronizerData*)> extraction_function) {
     //整个代码就这里使用了 InputSubscriber              
     subscribers_.emplace_back(std::make_unique<InputSubscriber<MsgT>>( nh_, 
-                                                                      kDefaultTopicNames_.at(type), 
+                                                                      kDefaultTopicNames_.at(type), //
                                                                       config_.max_input_queue_length,
                                                                       extraction_function, 
                                                                       this));
-  }
+  }//end function addQueue
 
   /**
    * @brief Try to lookup the specified transform from tf.

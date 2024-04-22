@@ -160,8 +160,7 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
   Eigen::MatrixXf range_image_;
   float max_range_in_image_ = 0.f;
   const Camera::Config* cam_config_;
-  std::vector<std::unique_ptr<InterpolatorBase>>
-      interpolators_;  // one for each thread.
+  std::vector<std::unique_ptr<InterpolatorBase>> interpolators_;  // one for each thread.
 
  private:
   const Config config_;

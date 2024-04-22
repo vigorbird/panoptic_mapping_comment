@@ -63,6 +63,7 @@ bool Camera::pointIsInViewFrustum(const Point& point_C,
   if (point_C.z() < -inflation_distance) {
     return false;
   }
+  //距离太远认为观测不到
   if (point_C.norm() > config_.max_range + inflation_distance) {
     return false;
   }

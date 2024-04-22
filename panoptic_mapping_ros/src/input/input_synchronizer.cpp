@@ -51,7 +51,7 @@ InputSynchronizer::InputSynchronizer(const Config& config,
 
 void InputSynchronizer::requestInputs(const InputData::InputTypes& types) {
   for (const auto& type : types) {
-    requested_inputs_.insert(type);
+    requested_inputs_.insert(type);//整个代码就这里向 requested_inputs_变量插入数据
   }
 }
 
@@ -64,10 +64,13 @@ void InputSynchronizer::advertiseInputTopics() {
   // concurrently, only lock the mutex when writing to the contained inputs.
   subscribers_.clear();
   subscribed_inputs_.clear();//subscribed_inputs_ = std::unordered_set<InputType>;
+  //作者在这里根据消息类型，来订阅topic
   for (const InputData::InputType type : requested_inputs_) {
     switch (type) {
       case InputData::InputType::kDepthImage: {//深度图像
         using MsgT = sensor_msgs::ImageConstPtr;
+        //这个开源代码，使用数据类型来指定topic名称
+        //传入的函数会在ros的消息回调函数中被调用！
         addQueue<MsgT>(type, [this](const MsgT& msg, InputSynchronizerData* data) {
               const cv_bridge::CvImageConstPtr depth =  cv_bridge::toCvCopy(msg, "32FC1");
               data->data->depth_image_ = depth->image;
@@ -84,6 +87,7 @@ void InputSynchronizer::advertiseInputTopics() {
         subscribed_inputs_.insert(InputData::InputType::kDepthImage);
         break;
       }
+
       case InputData::InputType::kColorImage: {//颜色图像
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
@@ -95,6 +99,7 @@ void InputSynchronizer::advertiseInputTopics() {
         subscribed_inputs_.insert(InputData::InputType::kColorImage);
         break;
       }
+
       case InputData::InputType::kSegmentationImage: {//语义分割图像
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
@@ -106,6 +111,7 @@ void InputSynchronizer::advertiseInputTopics() {
         subscribed_inputs_.insert(InputData::InputType::kSegmentationImage);
         break;
       }
+
       case InputData::InputType::kDetectronLabels: {
         using MsgT = panoptic_mapping_msgs::DetectronLabels;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
@@ -116,6 +122,7 @@ void InputSynchronizer::advertiseInputTopics() {
         subscribed_inputs_.insert(InputData::InputType::kDetectronLabels);
         break;
       }
+
       case InputData::InputType::kUncertaintyImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(
@@ -129,7 +136,9 @@ void InputSynchronizer::advertiseInputTopics() {
         subscribed_inputs_.insert(InputData::InputType::kUncertaintyImage);
         break;
       }
-    }
+
+
+    }//end switch 
   }
 }
 
@@ -147,9 +156,7 @@ bool InputSynchronizer::getDataInQueue(const ros::Time& timestamp,
   double max_delay = config_.max_delay;
   auto it = find_if(data_queue_.begin(), data_queue_.end(),
                     [&timestamp, &max_delay](const auto& arg) {
-                      return abs(arg->timestamp.toSec() - timestamp.toSec()) <=
-                             max_delay;
-                    });
+                      return abs(arg->timestamp.toSec() - timestamp.toSec()) <= max_delay;});
   if (it != data_queue_.end()) {
     // There already exists a data point.
     if (!it->get()->valid) {
@@ -211,7 +218,7 @@ bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
     oldest_time_ = data_queue_.front()->timestamp;
   }
 
-  data_queue_.emplace_back(new InputSynchronizerData());
+  data_queue_.emplace_back(new InputSynchronizerData());//向data_queue_插入了数据！！！
   InputSynchronizerData& data = *data_queue_.back();
 
   // Check transform.

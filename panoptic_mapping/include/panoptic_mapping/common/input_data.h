@@ -151,7 +151,7 @@ class InputData {
   DetectronLabels detectron_labels_;
 
   // Content tracking.
-  InputData::InputTypes contained_inputs_;
+  InputData::InputTypes contained_inputs_;//InputTypes = std::unordered_set<InputType>;
 };
 
 }  // namespace panoptic_mapping

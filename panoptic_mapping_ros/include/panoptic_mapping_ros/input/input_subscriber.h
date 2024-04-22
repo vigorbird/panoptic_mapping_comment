@@ -89,7 +89,7 @@ class InputSubscriber : public InputSubscriberBase {
     InputSynchronizerData* data;
     //整个代码里就这里调用了 getDataInQueue函数
     if (parent_->getDataInQueue(stamp, &data)) {
-      extraction_function_(msg, data);
+      extraction_function_(msg, data);//调用了传入的数据
       parent_->checkDataIsReady(data);
     }
   }

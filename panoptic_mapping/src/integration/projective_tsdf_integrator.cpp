@@ -54,9 +54,7 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
 
   // Setup the interpolators (one for each thread).
   for (int i = 0; i < config_.integration_threads; ++i) {
-    interpolators_.emplace_back(
-        config_utilities::Factory::create<InterpolatorBase>(
-            config_.interpolation_method));
+    interpolators_.emplace_back( config_utilities::Factory::create<InterpolatorBase>(config_.interpolation_method));
   }
 
   // Allocate range image.

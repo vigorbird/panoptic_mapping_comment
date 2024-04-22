@@ -73,7 +73,7 @@ MeshIntegrator::MeshIntegrator(const MeshIntegrator::Config& config,
 }
 
 //voxblox也有这个函数，只是多了一个 use_class_data 函数
-//在voxblox基础上又增加了一个判断条件：如果这个如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
+//在voxblox基础上又增加了一个判断条件：如果这个voxel相邻的其他voxel属于这个submap的数量太少 下面就不进行marchcube的mesh拟合了
 void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
                                   bool clear_updated_flag,
                                   bool use_class_data) {
@@ -107,9 +107,7 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
 
   std::list<std::thread> integration_threads;
   for (size_t i = 0; i < config_.integrator_threads; ++i) {
-    integration_threads.emplace_back(
-        &MeshIntegrator::generateMeshBlocksFunction, this, tsdf_blocks,
-        clear_updated_flag, index_getter.get());
+    integration_threads.emplace_back(&MeshIntegrator::generateMeshBlocksFunction, this, tsdf_blocks, clear_updated_flag, index_getter.get());
   }
 
   for (std::thread& thread : integration_threads) {
