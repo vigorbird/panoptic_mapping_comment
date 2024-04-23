@@ -45,7 +45,7 @@ class TrackingInfo {
  private:
   friend TrackingInfoAggregator;
   const int submap_id_;
-  std::unordered_map<int, int> counts_;  // <input_id, count>， value的值对应有多少个像素和这个input_id对应
+  std::unordered_map<int, int> counts_;  // <input_id, count>， value的值对应有多少个像素和这个input_id对应，即这个图像上，多少个像素属于同一个语义id
 
   // Approximate rendering.
   const Camera::Config camera_;
