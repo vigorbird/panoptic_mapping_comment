@@ -70,6 +70,7 @@ Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
   initialize();
 }
 
+//这个函数只在submap构造的时候被使用
 void Submap::initialize() {
   // Default values.
   std::stringstream ss;
@@ -81,10 +82,8 @@ void Submap::initialize() {
   T_M_S_inv_.setIdentity();
 
   // Setup layers.
-  tsdf_layer_ =
-      std::make_shared<TsdfLayer>(config_.voxel_size, config_.voxels_per_side);
-  mesh_layer_ =
-      std::make_shared<MeshLayer>(config_.voxel_size * config_.voxels_per_side);
+  tsdf_layer_ = std::make_shared<TsdfLayer>(config_.voxel_size, config_.voxels_per_side);
+  mesh_layer_ = std::make_shared<MeshLayer>(config_.voxel_size * config_.voxels_per_side);
   if (config_.useClassLayer()) {
     class_layer_ = config_.classification.create(config_.voxel_size,
                                                  config_.voxels_per_side);
@@ -97,9 +96,11 @@ void Submap::initialize() {
   }
 
   // Setup tools.
-  mesh_integrator_ = std::make_unique<MeshIntegrator>(
-      config_.mesh, tsdf_layer_, mesh_layer_, class_layer_,
-      config_.truncation_distance);
+  mesh_integrator_ = std::make_unique<MeshIntegrator>(config_.mesh, 
+                                                    tsdf_layer_, 
+                                                    mesh_layer_, 
+                                                    class_layer_,
+                                                    config_.truncation_distance);
 }
 
 void Submap::setT_M_S(const Transformation& T_M_S) {
@@ -276,6 +277,7 @@ void Submap::updateEverything(bool only_updated_blocks) {
 //默认值是only_updated_blocks = true，use_class_layer = flase
 void Submap::updateMesh(bool only_updated_blocks, bool use_class_layer) {
   // Use the default integrator config to have color always available.
+  //mesh_integrator_是submap内部的成员变量
   mesh_integrator_->generateMesh(only_updated_blocks, true,
                                  has_class_layer_ && use_class_layer);//从算法层面就这里调用了 generateMesh函数
 }

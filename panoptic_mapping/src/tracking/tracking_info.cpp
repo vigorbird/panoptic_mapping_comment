@@ -52,6 +52,7 @@ void TrackingInfo::evaluate(const cv::Mat& id_image,
                             const cv::Mat& depth_image) {
   // Pass through the image and lookup which pixels should be covered by the
   // submap. Must be called after all input is inserted.
+  // 遍历所有受到影响的像素范围
   for (int v = v_min_; v <= v_max_; ++v) {
     int range = 0;  // Number of pixels in x direction from current index to be counted.
     for (int u = u_min_; u <= std::min(u_max_, camera_.width - 1); ++u) {

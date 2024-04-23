@@ -261,7 +261,7 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData( SubmapCollectio
     submaps->getSubmapPtr(submap_id)->updateMesh();
   }
 
-  //3. 每个submap都对应一个trackinfo,，开启多线程更新这个类型数据里面每个语义标签对应多少个像素坐标
+  //3. 每个submap都对应一个trackinfo,，开启多线程更新每个观测到的submap里面每个语义标签对应多少个像素坐标
   // Render each submap in parallel.
   SubmapIndexGetter index_getter(visible_submaps);
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
@@ -270,23 +270,23 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData( SubmapCollectio
     threads.emplace_back(std::async(
         std::launch::async,
         [this, i, &tracking_data, &index_getter, submaps,input]() -> std::vector<TrackingInfo> {
-          // Also process the input image.
-          if (i == 0) {
-            //只是更新了TrackingInfoAggregator中的total_input_count_这个变量，key=语义分割id， value = 多少个像素
-            tracking_data.insertInputImage(  input->idImage(), input->depthImage(),
-                                             globals_->camera()->getConfig(), config_.rendering_subsampling);
-          }
-          std::vector<TrackingInfo> result;
-          int index;
-          while (index_getter.getNextIndex(&index)) {
-            //
-            if (config_.use_approximate_rendering) {//默认应该是进入这个条件
-              result.emplace_back(this->renderTrackingInfoApproximate(submaps->getSubmap(index), *input));
-            } else {
-              result.emplace_back(this->renderTrackingInfoVertices(submaps->getSubmap(index), *input));
+            // Also process the input image.
+            if (i == 0) {
+              //只是更新了TrackingInfoAggregator中的total_input_count_这个变量，key=语义分割id， value = 多少个像素
+              tracking_data.insertInputImage(  input->idImage(), input->depthImage(),
+                                              globals_->camera()->getConfig(), config_.rendering_subsampling);
             }
-          }
-          return result;
+            std::vector<TrackingInfo> result;
+            int index;
+            while (index_getter.getNextIndex(&index)) {
+              //
+              if (config_.use_approximate_rendering) {//默认应该是进入这个条件
+                result.emplace_back(this->renderTrackingInfoApproximate(submaps->getSubmap(index), *input));
+              } else {
+                result.emplace_back(this->renderTrackingInfoVertices(submaps->getSubmap(index), *input));
+              }
+            }
+            return result;
         }));
   }
 
@@ -320,6 +320,9 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData( SubmapCollectio
   return tracking_data;
 }// end computeTrackingData function!
 
+//submap = 当前帧被观测到的submap
+//input = 当前帧的深度图和语意图
+//这个函数的主要目的是取出这个submap对应的所有voxel，然后将这些voxel投影到图像上，统计这个图像上，多少个像素属于同一个语义id
 TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate( const Submap& submap, 
                                                                  const InputData& input) const {
   // Approximate rendering by projecting the surface points of the submap into
@@ -339,7 +342,7 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate( const Submap& s
   const cv::Mat& depth_image = input.depthImage();
 
   // Parse all blocks.
-  //获取这个submap里面的所有voxel索引
+  //1.获取这个submap里面的所有voxel索引
   voxblox::BlockIndexList index_list;
   submap.getMeshLayer().getAllAllocatedMeshes(&index_list);
   for (const voxblox::BlockIndex& index : index_list) {

@@ -87,6 +87,7 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
   if (only_mesh_updated_blocks) {
     //tsdf_layer_数据类型来自于voxblox
     //哪些block被更新了，并获取这些block的id=tsdf_blocks
+    //我个人认为应该是这个submap中哪些block被更新了
     tsdf_layer_->getAllUpdatedBlocks(voxblox::Update::Status::kMesh,
                                      &tsdf_blocks);
   } else {
@@ -97,7 +98,7 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
   //和voxblox一样
   for (const voxblox::BlockIndex& block_index : tsdf_blocks) {
     //mesh_layer_数据类型来自于voxblox
-    //判断现有地图中是否有这个block，如果有这个block直接返回这个block的指针，否则向地图插入这个block，并返回对应的指针
+    //判断现这个submap中是否有这个block，如果有这个block直接返回这个block的指针，否则向地图插入这个block，并返回对应的指针
     mesh_layer_->allocateMeshPtrByIndex(block_index);
   }
 
@@ -396,12 +397,10 @@ void MeshIntegrator::updateMeshColor(const TsdfBlock& tsdf_block,
       voxblox::utils::getColorIfValid(voxel, config_.min_weight,
                                       &(mesh->colors[i]));
     } else {
-      const voxblox::BlockIndex index =
-          tsdf_layer_->computeBlockIndexFromCoordinates(vertex);
+      const voxblox::BlockIndex index = tsdf_layer_->computeBlockIndexFromCoordinates(vertex);
       if (!tsdf_layer_->hasBlock(index)) {
         // The vertices should never lie outside allocated blocks.
-        LOG(WARNING)
-            << "Tried to color a mesh vertex outside allocated blocks.";
+        LOG(WARNING)<< "Tried to color a mesh vertex outside allocated blocks.";
         return;
       }
       const TsdfBlock& neighbor_block = tsdf_layer_->getBlockByIndex(index);
